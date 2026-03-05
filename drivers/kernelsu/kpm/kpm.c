@@ -35,6 +35,7 @@
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0) && defined(CONFIG_MODULES)
 #include <linux/moduleloader.h>
 #endif
+#include "../kernel_compat.h"
 #include "kpm.h"
 #include "compact.h"
 

@@ -3,6 +3,12 @@
 
 #include <linux/fs.h>
 #include <linux/version.h>
+#include <linux/uaccess.h>
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0)
+#undef access_ok
+#define access_ok(addr, size) __access_ok((unsigned long)(addr), (size), get_fs())
+#endif
 
 /*
  * ksu_copy_from_user_retry
