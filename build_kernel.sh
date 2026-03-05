@@ -15,21 +15,16 @@ SAFE_PATH="/usr/bin:/bin:/usr/sbin:/sbin"
 echo "Cleaning out directory..."
 rm -rf out
 
-# Step 2: Configure and build host tools with strictly SYSTEM PATH
-# We use env -i to purge ALL environment variables including PATH
-echo "Step 1: Configuring and building scripts with system tools..."
-env -i PATH="$SAFE_PATH" HOME="$HOME" make ARCH=$ARCH O=out \
+# Step 2: Configure and build host tools
+echo "Step 1: Configuring and building scripts..."
+make ARCH=$ARCH O=out \
     HOSTCC=/usr/bin/gcc \
     HOSTCXX=/usr/bin/g++ \
-    HOSTLD=/usr/bin/ld \
-    HOSTAS=/usr/bin/as \
     $DEFCONFIG
 
-env -i PATH="$SAFE_PATH" HOME="$HOME" make ARCH=$ARCH O=out \
+make ARCH=$ARCH O=out \
     HOSTCC=/usr/bin/gcc \
     HOSTCXX=/usr/bin/g++ \
-    HOSTLD=/usr/bin/ld \
-    HOSTAS=/usr/bin/as \
     scripts -j$(nproc --all)
 
 # Step 3: Build the kernel using Toolchain

@@ -18,6 +18,8 @@
 #include "mount.h"
 #include <linux/susfs.h>
 
+extern int path_umount(struct path *path, int flags);
+
 LIST_HEAD(LH_SUS_PATH);
 LIST_HEAD(LH_SUS_KSTAT_SPOOFER);
 LIST_HEAD(LH_SUS_MOUNT);
