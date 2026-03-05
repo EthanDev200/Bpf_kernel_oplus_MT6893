@@ -22,31 +22,14 @@ echo "Cleaning out directory..."
 rm -rf out
 
 # Step 2: Configure and build host tools
-echo "Step 1: Configuring and building scripts with Proton Clang..."
-make ARCH=$ARCH O=out \
-    CC="$CLANG" \
-    LD="$LD" \
-    AR="$AR" \
-    NM="$NM" \
-    OBJCOPY="$OBJCOPY" \
-    OBJDUMP="$OBJDUMP" \
-    STRIP="$STRIP" \
-    CROSS_COMPILE=aarch64-linux-gnu- \
-    CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+echo "Step 1: Configuring and building scripts..."
+# We build scripts with host compiler only to avoid flag leakage
+make O=out \
     HOSTCC=/usr/bin/gcc \
     HOSTCXX=/usr/bin/g++ \
     $DEFCONFIG
 
-make ARCH=$ARCH O=out \
-    CC="$CLANG" \
-    LD="$LD" \
-    AR="$AR" \
-    NM="$NM" \
-    OBJCOPY="$OBJCOPY" \
-    OBJDUMP="$OBJDUMP" \
-    STRIP="$STRIP" \
-    CROSS_COMPILE=aarch64-linux-gnu- \
-    CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+make O=out \
     HOSTCC=/usr/bin/gcc \
     HOSTCXX=/usr/bin/g++ \
     scripts -j$(nproc --all)

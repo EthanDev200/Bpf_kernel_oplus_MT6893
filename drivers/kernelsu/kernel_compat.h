@@ -8,8 +8,9 @@
 #include <linux/sched/task.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0)
-#undef access_ok
-#define access_ok(addr, size) __access_ok((unsigned long)(addr), (size), get_fs())
+#define ksu_access_ok(addr, size) __access_ok((unsigned long)(addr), (size), get_fs())
+#else
+#define ksu_access_ok(addr, size) access_ok(addr, size)
 #endif
 
 #ifndef TWA_RESUME
