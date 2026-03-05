@@ -23,15 +23,21 @@ rm -rf out
 
 # Step 2: Configure and build host tools
 echo "Step 1: Configuring and building scripts..."
-# We build scripts with host compiler only to avoid flag leakage
-make O=out \
+# We use target compiler for target objects (like empty.o) but host compiler for tools
+make ARCH=$ARCH O=out \
+    CC="$CLANG" \
     HOSTCC=/usr/bin/gcc \
     HOSTCXX=/usr/bin/g++ \
+    CROSS_COMPILE=aarch64-linux-gnu- \
+    CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
     $DEFCONFIG
 
-make O=out \
+make ARCH=$ARCH O=out \
+    CC="$CLANG" \
     HOSTCC=/usr/bin/gcc \
     HOSTCXX=/usr/bin/g++ \
+    CROSS_COMPILE=aarch64-linux-gnu- \
+    CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
     scripts -j$(nproc --all)
 
 # Step 3: Build the kernel using Toolchain

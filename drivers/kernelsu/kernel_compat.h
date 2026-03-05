@@ -6,6 +6,7 @@
 #include <linux/uaccess.h>
 #include <linux/sched.h>
 #include <linux/sched/task.h>
+#include <asm/unistd.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0)
 #define ksu_access_ok(addr, size) __access_ok((unsigned long)(addr), (size), get_fs())
@@ -15,6 +16,10 @@
 
 #ifndef TWA_RESUME
 #define TWA_RESUME 1
+#endif
+
+#ifndef __NR_clone3
+#define __NR_clone3 -1
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0)
