@@ -16,6 +16,23 @@
 #define TWA_RESUME 1
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0)
+static inline long copy_from_user_nofault(void *dst, const void __user *src, size_t size)
+{
+    return probe_kernel_read(dst, src, size);
+}
+
+static inline long copy_to_user_nofault(void __user *dst, const void *src, size_t size)
+{
+    return probe_kernel_write(dst, src, size);
+}
+
+static inline long strncpy_from_user_nofault(char *dst, const void __user *src, long count)
+{
+    return strncpy_from_user(dst, src, count);
+}
+#endif
+
 /*
  * ksu_copy_from_user_retry
  * try nofault copy first, if it fails, try with plain

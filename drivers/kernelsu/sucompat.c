@@ -12,6 +12,7 @@
 #include <linux/sched/task_stack.h>
 #include <linux/ptrace.h>
 
+#include "kernel_compat.h"
 #include "allowlist.h"
 #include "feature.h"
 #include "klog.h" // IWYU pragma: keep

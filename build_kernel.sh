@@ -17,14 +17,18 @@ rm -rf out
 
 # Step 2: Configure and build host tools
 echo "Step 1: Configuring and building scripts..."
-make O=out \
+make ARCH=$ARCH O=out \
     HOSTCC=/usr/bin/gcc \
     HOSTCXX=/usr/bin/g++ \
+    CC=/usr/bin/gcc \
+    CROSS_COMPILE=aarch64-linux-gnu- \
     $DEFCONFIG
 
-make O=out \
+make ARCH=$ARCH O=out \
     HOSTCC=/usr/bin/gcc \
     HOSTCXX=/usr/bin/g++ \
+    CC=/usr/bin/gcc \
+    CROSS_COMPILE=aarch64-linux-gnu- \
     scripts -j$(nproc --all)
 
 # Step 3: Build the kernel using Toolchain
