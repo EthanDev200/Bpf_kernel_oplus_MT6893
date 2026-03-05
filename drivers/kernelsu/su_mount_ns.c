@@ -13,7 +13,7 @@
 #include <linux/syscalls.h>
 #include <linux/task_work.h>
 #include <linux/version.h>
-#include <uapi/linux/mount.h>
+#include <linux/mount.h>
 
 #include "kernel_compat.h"
 #include "arch.h"
