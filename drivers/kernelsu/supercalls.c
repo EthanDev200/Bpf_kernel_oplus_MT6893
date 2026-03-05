@@ -12,6 +12,7 @@
 #include <linux/uaccess.h>
 #include <linux/version.h>
 
+#include "kernel_compat.h"
 #include "supercalls.h"
 #include "arch.h"
 #include "allowlist.h"

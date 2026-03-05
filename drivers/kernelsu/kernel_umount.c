@@ -10,6 +10,7 @@
 #include <linux/printk.h>
 #include <linux/types.h>
 
+#include "kernel_compat.h"
 #include "kernel_umount.h"
 #include "klog.h" // IWYU pragma: keep
 #include "allowlist.h"

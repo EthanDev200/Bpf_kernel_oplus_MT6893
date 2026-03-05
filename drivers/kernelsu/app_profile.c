@@ -9,6 +9,7 @@
 #include <linux/version.h>
 #include "objsec.h"
 
+#include "kernel_compat.h"
 #include "allowlist.h"
 #include "app_profile.h"
 #include "klog.h" // IWYU pragma: keep

@@ -12,6 +12,7 @@
 #include <linux/uaccess.h>
 #include <linux/uidgid.h>
 
+#include "kernel_compat.h"
 #include "allowlist.h"
 #include "setuid_hook.h"
 #include "klog.h" // IWYU pragma: keep

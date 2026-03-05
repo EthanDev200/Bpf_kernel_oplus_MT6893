@@ -4,10 +4,16 @@
 #include <linux/fs.h>
 #include <linux/version.h>
 #include <linux/uaccess.h>
+#include <linux/sched.h>
+#include <linux/sched/task.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0)
 #undef access_ok
 #define access_ok(addr, size) __access_ok((unsigned long)(addr), (size), get_fs())
+#endif
+
+#ifndef TWA_RESUME
+#define TWA_RESUME 1
 #endif
 
 /*

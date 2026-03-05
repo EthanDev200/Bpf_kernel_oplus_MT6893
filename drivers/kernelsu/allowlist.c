@@ -17,6 +17,7 @@
 #include <linux/compiler_types.h>
 #endif
 
+#include "kernel_compat.h"
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
 #include "ksud.h"

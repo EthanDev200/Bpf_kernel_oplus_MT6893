@@ -15,6 +15,7 @@
 #include <linux/version.h>
 #include <uapi/linux/mount.h>
 
+#include "kernel_compat.h"
 #include "arch.h"
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"

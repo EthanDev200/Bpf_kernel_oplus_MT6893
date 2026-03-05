@@ -17,12 +17,12 @@ rm -rf out
 
 # Step 2: Configure and build host tools
 echo "Step 1: Configuring and building scripts..."
-make ARCH=$ARCH O=out \
+make O=out \
     HOSTCC=/usr/bin/gcc \
     HOSTCXX=/usr/bin/g++ \
     $DEFCONFIG
 
-make ARCH=$ARCH O=out \
+make O=out \
     HOSTCC=/usr/bin/gcc \
     HOSTCXX=/usr/bin/g++ \
     scripts -j$(nproc --all)

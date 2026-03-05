@@ -11,6 +11,7 @@
 #include <trace/events/syscalls.h>
 #include <linux/namei.h>
 
+#include "kernel_compat.h"
 #include "allowlist.h"
 #include "arch.h"
 #include "klog.h" // IWYU pragma: keep
