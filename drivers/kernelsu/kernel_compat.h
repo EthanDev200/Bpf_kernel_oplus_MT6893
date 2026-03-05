@@ -7,6 +7,7 @@
 #include <linux/sched.h>
 #include <linux/sched/task.h>
 #include <asm/unistd.h>
+#include <uapi/linux/fs.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0)
 #define ksu_access_ok(addr, size) __access_ok((unsigned long)(addr), (size), get_fs())
@@ -20,6 +21,10 @@
 
 #ifndef __NR_clone3
 #define __NR_clone3 -1
+#endif
+
+#ifndef REMAP_FILE_DEDUP
+#define REMAP_FILE_DEDUP 0x1
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0)
