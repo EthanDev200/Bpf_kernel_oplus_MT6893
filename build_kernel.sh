@@ -22,9 +22,8 @@ echo "Cleaning out directory..."
 rm -rf out
 
 # Step 2: Configure and build host tools
-echo "Step 1: Configuring and building scripts with Proton Clang..."
-# We use target compiler for target objects (like empty.o) but host compiler for tools
-# Removed -j from defconfig to avoid potential race conditions during initial script gen
+echo "Step 1: Configuring and building scripts..."
+# We use ARCH and CROSS_COMPILE even for scripts to let kbuild know the target bitness
 make ARCH=$ARCH O=out \
     CC="$CLANG" \
     HOSTCC=/usr/bin/gcc \
