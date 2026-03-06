@@ -28,6 +28,10 @@ jobs:
       run: |
         bash build_kernel.sh
 
+    - name: Print build log on failure
+      if: failure()
+      run: tail -100 build.log
+
     - name: Upload Image.gz-dtb
       uses: actions/upload-artifact@v4
       with:
