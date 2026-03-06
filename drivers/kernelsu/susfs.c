@@ -14,7 +14,7 @@
 #include <linux/fdtable.h>
 #include <linux/statfs.h>
 #include <linux/susfs.h>
-#include "mount.h"
+#include "../../../fs/mount.h"
 #include "susfs.h"
 
 static spinlock_t susfs_spin_lock;
