@@ -28,6 +28,10 @@ jobs:
       run: |
         bash build_kernel.sh
 
+    - name: Show errors on failure
+      if: failure()
+      run: grep -E "error:|fatal error:" build.log | head -30
+
     - name: Print build log on failure
       if: failure()
       run: tail -100 build.log
