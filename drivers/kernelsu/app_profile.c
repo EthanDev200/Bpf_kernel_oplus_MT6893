@@ -94,7 +94,6 @@ static void disable_seccomp(void)
 
     current->seccomp.mode = 0;
     current->seccomp.filter = NULL;
-    atomic_set(&current->seccomp.filter_count, 0);
     spin_unlock_irq(&current->sighand->siglock);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
@@ -234,7 +233,6 @@ static void disable_seccomp_for_task(struct task_struct *tsk)
     memcpy(fake, tsk, sizeof(*fake));
     tsk->seccomp.mode = SECCOMP_MODE_DISABLED;
     tsk->seccomp.filter = NULL;
-    atomic_set(&tsk->seccomp.filter_count, 0);
     spin_unlock_irq(&tsk->sighand->siglock);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
