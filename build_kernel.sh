@@ -4,7 +4,7 @@
 ARCH=arm64
 SUBARCH=arm64
 DEFCONFIG=cupida_defconfig
-TOOLCHAIN=/home/captain/Projects/toolchain/proton-clang
+TOOLCHAIN=${TOOLCHAIN:-/home/captain/Projects/toolchain/proton-clang}
 KBUILD_BUILD_USER=xCaptaiN09
 KBUILD_BUILD_HOST=NetHunter
 

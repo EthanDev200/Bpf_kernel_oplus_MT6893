@@ -9,7 +9,6 @@
 #include <linux/version.h>
 #include "objsec.h"
 
-#include "kernel_compat.h"
 #include "allowlist.h"
 #include "app_profile.h"
 #include "klog.h" // IWYU pragma: keep
@@ -63,7 +62,12 @@ static void setup_groups(struct root_profile *profile, struct cred *cred)
     put_group_info(group_info);
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
+extern void put_seccomp_filter(struct task_struct *tsk);
+#define seccomp_filter_release put_seccomp_filter
+#else
 void seccomp_filter_release(struct task_struct *tsk);
+#endif
 
 static void disable_seccomp(void)
 {
@@ -90,9 +94,7 @@ static void disable_seccomp(void)
 
     current->seccomp.mode = 0;
     current->seccomp.filter = NULL;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
     atomic_set(&current->seccomp.filter_count, 0);
-#endif
     spin_unlock_irq(&current->sighand->siglock);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
@@ -112,7 +114,6 @@ void escape_with_root_profile(void)
     struct cred *cred;
     struct task_struct *p = current;
     struct task_struct *t;
-    struct root_profile profile;
 
     cred = prepare_creds();
     if (!cred) {
@@ -126,56 +127,50 @@ void escape_with_root_profile(void)
         return;
     }
 
-    ksu_get_root_profile(cred->uid.val, &profile);
+    struct root_profile *profile = ksu_get_root_profile(cred->uid.val);
 
-    cred->uid.val = profile.uid;
-    cred->suid.val = profile.uid;
-    cred->euid.val = profile.uid;
-    cred->fsuid.val = profile.uid;
+    cred->uid.val = profile->uid;
+    cred->suid.val = profile->uid;
+    cred->euid.val = profile->uid;
+    cred->fsuid.val = profile->uid;
 
-    cred->gid.val = profile.gid;
-    cred->fsgid.val = profile.gid;
-    cred->sgid.val = profile.gid;
-    cred->egid.val = profile.gid;
+    cred->gid.val = profile->gid;
+    cred->fsgid.val = profile->gid;
+    cred->sgid.val = profile->gid;
+    cred->egid.val = profile->gid;
     cred->securebits = 0;
 
-    BUILD_BUG_ON(sizeof(profile.capabilities.effective) !=
+    BUILD_BUG_ON(sizeof(profile->capabilities.effective) !=
                  sizeof(kernel_cap_t));
 
     // setup capabilities
     // we need CAP_DAC_READ_SEARCH becuase `/data/adb/ksud` is not accessible for non root process
     // we add it here but don't add it to cap_inhertiable, it would be dropped automaticly after exec!
-    u64 cap_for_ksud = profile.capabilities.effective | CAP_DAC_READ_SEARCH;
+    u64 cap_for_ksud = profile->capabilities.effective | CAP_DAC_READ_SEARCH;
     memcpy(&cred->cap_effective, &cap_for_ksud, sizeof(cred->cap_effective));
-    memcpy(&cred->cap_permitted, &profile.capabilities.effective,
+    memcpy(&cred->cap_permitted, &profile->capabilities.effective,
            sizeof(cred->cap_permitted));
-    memcpy(&cred->cap_bset, &profile.capabilities.effective,
+    memcpy(&cred->cap_bset, &profile->capabilities.effective,
            sizeof(cred->cap_bset));
 
-    setup_groups(&profile, cred);
-    setup_selinux(profile.selinux_domain, cred);
+    setup_groups(profile, cred);
 
     commit_creds(cred);
 
     disable_seccomp();
 
+    setup_selinux(profile->selinux_domain);
+
     for_each_thread (p, t) {
         ksu_set_task_tracepoint_flag(t);
     }
 
-    setup_mount_ns(profile.namespaces);
+    setup_mount_ns(profile->namespaces);
 }
 
 void escape_to_root_for_init(void)
 {
-    struct cred *cred = prepare_creds();
-    if (!cred) {
-        pr_err("Failed to prepare init's creds!\n");
-        return;
-    }
-
-    setup_selinux(KERNEL_SU_CONTEXT, cred);
-    commit_creds(cred);
+    setup_selinux(KERNEL_SU_CONTEXT);
 }
 
 #ifdef CONFIG_KSU_MANUAL_SU
@@ -239,9 +234,7 @@ static void disable_seccomp_for_task(struct task_struct *tsk)
     memcpy(fake, tsk, sizeof(*fake));
     tsk->seccomp.mode = SECCOMP_MODE_DISABLED;
     tsk->seccomp.filter = NULL;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
     atomic_set(&tsk->seccomp.filter_count, 0);
-#endif
     spin_unlock_irq(&tsk->sighand->siglock);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
@@ -262,7 +255,6 @@ void escape_to_root_for_cmd_su(uid_t target_uid, pid_t target_pid)
     struct task_struct *target_task;
     struct task_struct *p = current;
     struct task_struct *t;
-    struct root_profile profile;
 
     pr_info("cmd_su: escape_to_root_for_cmd_su called for UID: %d, PID: %d\n",
             target_uid, target_pid);
@@ -291,30 +283,29 @@ void escape_to_root_for_cmd_su(uid_t target_uid, pid_t target_pid)
         return;
     }
 
-    ksu_get_root_profile(newcreds->uid.val, &profile);
+    struct root_profile *profile = ksu_get_root_profile(target_uid);
 
-    newcreds->uid.val = profile.uid;
-    newcreds->suid.val = profile.uid;
-    newcreds->euid.val = profile.uid;
-    newcreds->fsuid.val = profile.uid;
+    newcreds->uid.val = profile->uid;
+    newcreds->suid.val = profile->uid;
+    newcreds->euid.val = profile->uid;
+    newcreds->fsuid.val = profile->uid;
 
-    newcreds->gid.val = profile.gid;
-    newcreds->fsgid.val = profile.gid;
-    newcreds->sgid.val = profile.gid;
-    newcreds->egid.val = profile.gid;
+    newcreds->gid.val = profile->gid;
+    newcreds->fsgid.val = profile->gid;
+    newcreds->sgid.val = profile->gid;
+    newcreds->egid.val = profile->gid;
     newcreds->securebits = 0;
 
-    u64 cap_for_cmd_su = profile.capabilities.effective | CAP_DAC_READ_SEARCH |
+    u64 cap_for_cmd_su = profile->capabilities.effective | CAP_DAC_READ_SEARCH |
                          CAP_SETUID | CAP_SETGID;
     memcpy(&newcreds->cap_effective, &cap_for_cmd_su,
            sizeof(newcreds->cap_effective));
-    memcpy(&newcreds->cap_permitted, &profile.capabilities.effective,
+    memcpy(&newcreds->cap_permitted, &profile->capabilities.effective,
            sizeof(newcreds->cap_permitted));
-    memcpy(&newcreds->cap_bset, &profile.capabilities.effective,
+    memcpy(&newcreds->cap_bset, &profile->capabilities.effective,
            sizeof(newcreds->cap_bset));
 
-    setup_groups(&profile, newcreds);
-    setup_selinux(profile.selinux_domain, newcreds);
+    setup_groups(profile, newcreds);
     task_lock(target_task);
 
     const struct cred *old_creds = get_task_cred(target_task);
@@ -327,6 +318,7 @@ void escape_to_root_for_cmd_su(uid_t target_uid, pid_t target_pid)
         disable_seccomp_for_task(target_task);
     }
 
+    setup_selinux(profile->selinux_domain);
     put_cred(old_creds);
     wake_up_process(target_task);
 
@@ -341,7 +333,7 @@ void escape_to_root_for_cmd_su(uid_t target_uid, pid_t target_pid)
     for_each_thread (p, t) {
         ksu_set_task_tracepoint_flag(t);
     }
-    setup_mount_ns(profile.namespaces);
+    setup_mount_ns(profile->namespaces);
     pr_info("cmd_su: privilege escalation completed for UID: %d, PID: %d\n",
             target_uid, target_pid);
 }

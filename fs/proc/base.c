@@ -99,6 +99,10 @@
 #include "internal.h"
 #include "fd.h"
 
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs_def.h>
+#endif
+
 #include "../../lib/kstrtox.h"
 
 #if defined (OPLUS_FEATURE_HEALTHINFO) && defined (CONFIG_OPLUS_JANK_INFO)
@@ -1675,6 +1679,11 @@ static int proc_pid_readlink(struct dentry * dentry, char __user * buffer, int b
 	int error = -EACCES;
 	struct inode *inode = d_inode(dentry);
 	struct path path;
+
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+	if (unlikely(inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC))
+		return -ENOENT;
+#endif
 
 	/* Are we allowed to snoop on the tasks file descriptors? */
 	if (!proc_fd_access_allowed(inode))

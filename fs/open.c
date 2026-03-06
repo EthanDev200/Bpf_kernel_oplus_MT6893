@@ -28,12 +28,12 @@
 #include <linux/audit.h>
 #include <linux/falloc.h>
 #include <linux/fs_struct.h>
-#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
-#include <linux/susfs.h>
-#endif
 #include <linux/ima.h>
 #include <linux/dnotify.h>
 #include <linux/compat.h>
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs.h>
+#endif
 
 #include "internal.h"
 #include <trace/hooks/syscall_check.h>
@@ -357,6 +357,13 @@ SYSCALL_DEFINE4(fallocate, int, fd, int, mode, loff_t, offset, loff_t, len)
  * We do this by temporarily clearing all FS-related capabilities and
  * switching the fsuid/fsgid around to the real ones.
  */
+
+#ifdef CONFIG_KSU_SUSFS_SUS_SU
+extern bool susfs_is_sus_su_hooks_enabled __read_mostly;
+extern int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
+			int *flags);
+#endif
+
 long do_faccessat(int dfd, const char __user *filename, int mode)
 {
 	const struct cred *old_cred;
@@ -366,6 +373,12 @@ long do_faccessat(int dfd, const char __user *filename, int mode)
 	struct vfsmount *mnt;
 	int res;
 	unsigned int lookup_flags = LOOKUP_FOLLOW;
+
+#ifdef CONFIG_KSU_SUSFS_SUS_SU
+	if (susfs_is_sus_su_hooks_enabled) {
+		ksu_handle_faccessat(&dfd, &filename, &mode, NULL);
+	}
+#endif
 
 	if (mode & ~S_IRWXO)	/* where's F_OK, X_OK, W_OK, R_OK? */
 		return -EINVAL;
@@ -1109,17 +1122,10 @@ long do_sys_open(int dfd, const char __user *filename, int flags, umode_t mode)
 	if (IS_ERR(tmp))
 		return PTR_ERR(tmp);
 
+skip_getname:
 	fd = get_unused_fd_flags(flags);
 	if (fd >= 0) {
 		struct file *f = do_filp_open(dfd, tmp, &op);
-#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
-		if (unlikely(IS_ERR(f)) && (PTR_ERR(f) == -ENOENT || PTR_ERR(f) == -EACCES)) {
-			struct file *f_redirect = susfs_open_redirect(dfd, tmp, &op);
-			if (f_redirect) {
-				f = f_redirect;
-			}
-		}
-#endif
 		if (IS_ERR(f)) {
 			put_unused_fd(fd);
 			fd = PTR_ERR(f);

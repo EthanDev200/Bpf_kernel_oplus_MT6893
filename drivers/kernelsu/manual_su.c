@@ -3,7 +3,6 @@
 #include <linux/printk.h>
 #include <linux/cred.h>
 #include <linux/fs.h>
-#include <linux/uaccess.h>
 #include <linux/file.h>
 #include <linux/mm.h>
 #include <linux/slab.h>

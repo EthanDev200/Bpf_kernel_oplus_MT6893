@@ -12,7 +12,6 @@
 #include <linux/sched/task_stack.h>
 #include <linux/ptrace.h>
 
-#include "kernel_compat.h"
 #include "allowlist.h"
 #include "feature.h"
 #include "klog.h" // IWYU pragma: keep
@@ -181,3 +180,15 @@ void ksu_sucompat_exit()
 {
     ksu_unregister_feature_handler(KSU_FEATURE_SU_COMPAT);
 }
+
+#ifdef CONFIG_KSU_SUSFS_SUS_SU
+extern bool ksu_devpts_hook;
+
+void ksu_susfs_disable_sus_su(void) {
+    ksu_devpts_hook = false;
+}
+
+void ksu_susfs_enable_sus_su(void) {
+    ksu_devpts_hook = true;
+}
+#endif // #ifdef CONFIG_KSU_SUSFS_SUS_SU

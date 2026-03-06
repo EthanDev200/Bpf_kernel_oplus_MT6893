@@ -22,6 +22,88 @@ config KSU_MANUAL_SU
     help
       Use manual su and authorize the corresponding command line and application via prctl
 
+config KSU_SUSFS
+	bool "SukiSU SUSFS support"
+	depends on KSU
+	default y
+	help
+	  Enable SUSFS support for SukiSU.
+
+config KSU_SUSFS_HAS_MAGIC_MOUNT
+	bool "SUSFS Magic Mount support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_SUS_PATH
+	bool "SUSFS Sus Path support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_SUS_MOUNT
+	bool "SUSFS Sus Mount support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
+	bool "SUSFS Auto Add Sus KSU Default Mount support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT
+	bool "SUSFS Auto Add Sus Bind Mount support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_SUS_KSTAT
+	bool "SUSFS Sus Kstat support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_SUS_OVERLAYFS
+	bool "SUSFS Sus Overlayfs support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_TRY_UMOUNT
+	bool "SUSFS Try Umount support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
+	bool "SUSFS Auto Add Try Umount For Bind Mount support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_SPOOF_UNAME
+	bool "SUSFS Spoof Uname support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_ENABLE_LOG
+	bool "SUSFS Enable Log support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
+	bool "SUSFS Hide KSU SUSFS Symbols support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
+	bool "SUSFS Spoof Cmdline Or Bootconfig support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_OPEN_REDIRECT
+	bool "SUSFS Open Redirect support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_SUS_SU
+	bool "SUSFS Sus SU support"
+	depends on KSU_SUSFS
+	default y
+
 config KPM
     bool "Enable SukiSU KPM"
     depends on KSU && 64BIT

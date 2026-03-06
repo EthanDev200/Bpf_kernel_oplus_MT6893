@@ -20,15 +20,15 @@
 #include <linux/syscalls.h>
 #include <linux/unistd.h>
 #include <linux/compat.h>
+
+#include <linux/uaccess.h>
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs.h>
+#endif
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 #include <linux/susfs_def.h>
 #endif
 
-#include <linux/uaccess.h>
-
-#ifdef CONFIG_KSU_SUSFS_SUS_PATH
-extern int susfs_sus_ino_for_filldir64(unsigned long ino);
-#endif
 int iterate_dir(struct file *file, struct dir_context *ctx)
 {
 	struct inode *inode = file_inode(file);
@@ -138,6 +138,11 @@ static int fillonedir(struct dir_context *ctx, const char *name, int namlen,
 
 	if (buf->result)
 		return -EINVAL;
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+	if (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC) && susfs_sus_ino_for_filldir64(ino)) {
+		return 0;
+	}
+#endif
 	buf->result = verify_dirent_name(name, namlen);
 	if (buf->result < 0)
 		return buf->result;
@@ -227,6 +232,11 @@ static int filldir(struct dir_context *ctx, const char *name, int namlen,
 	buf->error = -EINVAL;	/* only used if we fail.. */
 	if (reclen > buf->count)
 		return -EINVAL;
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+	if (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC) && susfs_sus_ino_for_filldir64(ino)) {
+		return 0;
+	}
+#endif
 	d_ino = ino;
 	if (sizeof(d_ino) < sizeof(ino) && d_ino != ino) {
 		buf->error = -EOVERFLOW;
@@ -321,6 +331,11 @@ static int filldir64(struct dir_context *ctx, const char *name, int namlen,
 	buf->error = -EINVAL;	/* only used if we fail.. */
 	if (reclen > buf->count)
 		return -EINVAL;
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+	if (likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC) && susfs_sus_ino_for_filldir64(ino)) {
+		return 0;
+	}
+#endif
 	dirent = buf->previous;
 	if (dirent) {
 		if (signal_pending(current))
@@ -385,6 +400,9 @@ int ksys_getdents64(unsigned int fd, struct linux_dirent64 __user *dirent,
 	return error;
 }
 
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+extern int susfs_sus_ino_for_filldir64(unsigned long ino);
+#endif
 
 SYSCALL_DEFINE3(getdents64, unsigned int, fd,
 		struct linux_dirent64 __user *, dirent, unsigned int, count)

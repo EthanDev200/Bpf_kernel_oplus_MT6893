@@ -27,10 +27,7 @@
 #include <linux/task_work.h>
 #include <linux/sched/task.h>
 #include <linux/fs_context.h>
-
-#if defined(CONFIG_KSU_SUSFS_SUS_MOUNT) || defined(CONFIG_KSU_SUSFS_TRY_UMOUNT)
-#include <linux/susfs_def.h>
-#endif
+#include <linux/susfs.h>
 
 #include "pnode.h"
 #include "internal.h"
@@ -173,7 +170,7 @@ static void mnt_free_id(struct mount *mnt)
 	if (likely(mnt->mnt.susfs_mnt_id_backup)) {
 		// If mnt->mnt.susfs_mnt_id_backup is not zero, it means mnt->mnt_id is spoofed,
 		// so here we return the original mnt_id for being freed.
-		ida_free(&mnt_id_ida, mnt->mnt.susfs_mnt_id_backup);
+		ida_free(&mnt_id_ida, mnt->mnt_id);
 		return;
 	}
 #endif
@@ -1087,6 +1084,14 @@ bypass_orig_flow:
 	mnt->mnt_mountpoint	= mnt->mnt.mnt_root;
 	mnt->mnt_parent		= mnt;
 
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+	// If caller process is zygote, then it is a normal mount, so we just reorder the mnt_id
+	if (susfs_is_current_zygote_domain()) {
+		mnt->mnt.susfs_mnt_id_backup = mnt->mnt_id;
+		mnt->mnt_id = current->susfs_last_fake_mnt_id++;
+	}
+#endif
+
 	lock_mount_hash();
 	list_add_tail(&mnt->mnt_instance, &mnt->mnt.mnt_sb->s_mounts);
 	unlock_mount_hash();
@@ -1161,7 +1166,7 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	bool is_current_ksu_domain = susfs_is_current_ksu_domain();
 	bool is_current_zygote_domain = susfs_is_current_zygote_domain();
 
-	/* - It is very important that we need to use CL_COPY_MNT_NS to identify whether 
+	/* - It is very important that we need to use CL_COPY_MNT_NS to identify whether
 	 *   the clone is a copy_tree() or single mount like called by __do_loopback()
 	 * - if caller process is KSU, consider the following situation:
 	 *     1. it is NOT doing unshare => call alloc_vfsmnt() to assign a new sus mnt_id
@@ -1185,7 +1190,7 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	}
 	// Secondly, check if it is zygote process and no matter it is doing unshare or not
 	if (likely(is_current_zygote_domain) && (old->mnt_id >= DEFAULT_SUS_MNT_ID)) {
-		/* Important Note: 
+		/* Important Note:
 		 *  - Here we can't determine whether the unshare is called zygisk or not,
 		 *    so we can only patch out the unshare code in zygisk source code for now
 		 *  - But at least we can deal with old sus mounts using alloc_vfsmnt()
@@ -1251,19 +1256,19 @@ bypass_orig_flow:
 
 	atomic_inc(&sb->s_active);
 	mnt->mnt.mnt_sb = sb;
-	mnt->mnt.mnt_root = dget(root);
-	mnt->mnt_mountpoint = mnt->mnt.mnt_root;
-	mnt->mnt_parent = mnt;
+		mnt->mnt.mnt_root = dget(root);
+		mnt->mnt_mountpoint = mnt->mnt.mnt_root;
+		mnt->mnt_parent = mnt;
 
-#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-	// If caller process is zygote and not doing unshare, so we just reorder the mnt_id
-	if (likely(is_current_zygote_domain) && !(flag & CL_ZYGOTE_COPY_MNT_NS)) {
-		mnt->mnt.susfs_mnt_id_backup = mnt->mnt_id;
-		mnt->mnt_id = current->susfs_last_fake_mnt_id++;
-	}
-#endif
+	#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+		// If caller process is zygote and not doing unshare, so we just reorder the mnt_id
+		if (likely(is_current_zygote_domain) && !(flag & CL_ZYGOTE_COPY_MNT_NS)) {
+			mnt->mnt.susfs_mnt_id_backup = mnt->mnt_id;
+			mnt->mnt_id = current->susfs_last_fake_mnt_id++;
+		}
+	#endif
 
-	lock_mount_hash();
+		lock_mount_hash();
 	list_add_tail(&mnt->mnt_instance, &sb->s_mounts);
 	unlock_mount_hash();
 
@@ -3194,6 +3199,12 @@ long do_mount(const char *dev_name, const char __user *dir_name,
 	}
 #endif
 dput_out:
+#if defined(CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT) && defined(CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT)
+	// Just for the compatibility of Magic Mount KernelSU
+	if (!retval && susfs_is_auto_add_sus_ksu_default_mount_enabled && susfs_is_current_ksu_domain()) {
+		susfs_auto_add_sus_ksu_default_mount(dir_name);
+	}
+#endif
 	path_put(&path);
 	return retval;
 }
@@ -3301,7 +3312,6 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
 		copy_flags |= CL_ZYGOTE_COPY_MNT_NS;
 	}
 #endif
-
 	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
 	if (IS_ERR(new)) {
 		namespace_unlock();
@@ -3343,7 +3353,7 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
 	// q->mnt.susfs_mnt_id_backup -> original mnt_id
 	// q->mnt_id -> will be modified to the fake mnt_id
 
-	// Here We are only interested in processes of which original mnt namespace belongs to zygote 
+	// Here We are only interested in processes of which original mnt namespace belongs to zygote
 	// Also we just make use of existing 'q' mount pointer, no need to delcare extra mount pointer
 	if (is_zygote_pid) {
 		last_entry_mnt_id = list_first_entry(&new_ns->list, struct mount, mnt_list)->mnt_id;
@@ -3360,7 +3370,6 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
 	// Or should we put a lock here?
 	current->susfs_last_fake_mnt_id = last_entry_mnt_id;
 #endif
-
 	namespace_unlock();
 
 	if (rootmnt)
@@ -3931,53 +3940,26 @@ void susfs_run_try_umount_for_current_mnt_ns(void) {
 #endif
 #ifdef CONFIG_KSU_SUSFS
 bool susfs_is_mnt_devname_ksu(struct path *path) {
-        struct mount *mnt;
+	struct mount *mnt;
 
-        if (path && path->mnt) {
-                mnt = real_mount(path->mnt);
-                if (mnt && mnt->mnt_devname && !strcmp(mnt->mnt_devname, "KSU")) {
-                        return true;
-                }
-        }
-        return false;
+	if (path && path->mnt) {
+		mnt = real_mount(path->mnt);
+		if (mnt && mnt->mnt_devname && !strcmp(mnt->mnt_devname, "KSU")) {
+			return true;
+		}
+	}
+	return false;
 }
 #endif
 
+// Append to the end of fs/namespace.c
+int path_mount(const char *dev_name, struct path *path,
+		const char *type_page, unsigned long flags, void *data_page)
+{
+	return do_mount(dev_name, path->dentry->d_name.name, type_page, flags, data_page);
+}
+
 int path_umount(struct path *path, int flags)
 {
-	struct mount *mnt = real_mount(path->mnt);
-	int ret;
-
-	ret = security_sb_umount(path->mnt, flags);
-	if (ret)
-		return ret;
-
-	if (flags & ~(MNT_FORCE | MNT_DETACH | MNT_EXPIRE | UMOUNT_NOFOLLOW))
-		return -EINVAL;
-
-	if (!may_mount())
-		return -EPERM;
-
-	if (path->dentry != path->mnt->mnt_root)
-		return -EINVAL;
-
-	if (!check_mnt(mnt))
-		return -EINVAL;
-
-	if (mnt->mnt.mnt_flags & MNT_LOCKED) /* Check optimistically */
-		return -EINVAL;
-
-	if (flags & MNT_FORCE && mnt->mnt.mnt_sb->s_op->umount_begin)
-		mnt->mnt.mnt_sb->s_op->umount_begin(mnt->mnt.mnt_sb);
-
-	/*
-	 * No lock here, the umount namespace may be in the middle of
-	 * redoing the namespace.
-	 */
-	down_write(&namespace_sem);
-	ret = do_umount(mnt, flags);
-	up_write(&namespace_sem);
-
-	return ret;
+	return do_umount(real_mount(path->mnt), flags);
 }
-EXPORT_SYMBOL(path_umount);

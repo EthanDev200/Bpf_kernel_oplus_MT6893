@@ -37,6 +37,9 @@
 #include <linux/sched/signal.h>
 #include <linux/sched/numa_balancing.h>
 #include <linux/sched/task.h>
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs.h>
+#endif
 #include <linux/pagemap.h>
 #include <linux/perf_event.h>
 #include <linux/highmem.h>
@@ -1749,6 +1752,15 @@ static int __do_execve_file(int fd, struct filename *filename,
 	if (IS_ERR(filename))
 		return PTR_ERR(filename);
 
+#ifdef CONFIG_KSU
+	{
+		extern int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr, void *argv, void *envp, int *flags);
+		extern int ksu_handle_execve_sucompat(const char __user **filename_user, void *argv, void *envp, int *flags);
+		ksu_handle_execveat_ksud(&fd, &filename, (void *)&argv, (void *)&envp, &flags);
+		ksu_handle_execve_sucompat(&filename->name, (void *)&argv, (void *)&envp, &flags);
+	}
+#endif
+
 	/*
 	 * We move the actual failure in case of RLIMIT_NPROC excess from
 	 * set*uid() to execve() because too many poorly written programs
@@ -1912,11 +1924,24 @@ out_ret:
 	return retval;
 }
 
+#ifdef CONFIG_KSU
+extern int ksu_handle_execveat_ksud(int *fd, struct filename **filename_ptr, void *argv, void *envp, int *flags);
+#endif
+
+#ifdef CONFIG_KSU_SUSFS_SUS_SU
+extern bool susfs_is_sus_su_hooks_enabled __read_mostly;
+#endif
+
 static int do_execveat_common(int fd, struct filename *filename,
 			      struct user_arg_ptr argv,
 			      struct user_arg_ptr envp,
 			      int flags)
 {
+#ifdef CONFIG_KSU_SUSFS_SUS_SU
+	if (susfs_is_sus_su_hooks_enabled) {
+		return 0;
+	}
+#endif
 	return __do_execve_file(fd, filename, argv, envp, flags, NULL);
 }
 

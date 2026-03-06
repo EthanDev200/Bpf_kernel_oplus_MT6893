@@ -13,13 +13,16 @@
 #include <linux/version.h>
 #include <linux/mount.h>
 
+#ifndef REMAP_FILE_DEDUP
+#define REMAP_FILE_DEDUP 0x01
+#endif
+
 #include "objsec.h"
 
 #include "klog.h" // IWYU pragma: keep
 #include "selinux/selinux.h"
 #include "ksud.h"
 
-#include "kernel_compat.h"
 #include "file_wrapper.h"
 
 struct ksu_file_wrapper {
@@ -92,7 +95,7 @@ static ssize_t ksu_wrapper_write_iter(struct kiocb *iocb, struct iov_iter *iovi)
     return orig->f_op->write_iter(iocb, iovi);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 static int ksu_wrapper_iopoll(struct kiocb *kiocb, struct io_comp_batch *icb,
                               unsigned int v)
@@ -390,7 +393,7 @@ static struct ksu_file_wrapper *ksu_create_file_wrapper(struct file *fp)
     p->ops.write = fp->f_op->write ? ksu_wrapper_write : NULL;
     p->ops.read_iter = fp->f_op->read_iter ? ksu_wrapper_read_iter : NULL;
     p->ops.write_iter = fp->f_op->write_iter ? ksu_wrapper_write_iter : NULL;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
     p->ops.iopoll = fp->f_op->iopoll ? ksu_wrapper_iopoll : NULL;
 #endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0)

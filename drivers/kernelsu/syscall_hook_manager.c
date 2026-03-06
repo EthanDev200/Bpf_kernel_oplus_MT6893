@@ -1,3 +1,6 @@
+#ifndef __NR_clone3
+#define __NR_clone3 435
+#endif
 #include "linux/compiler.h"
 #include "linux/cred.h"
 #include "linux/printk.h"
@@ -11,7 +14,6 @@
 #include <trace/events/syscalls.h>
 #include <linux/namei.h>
 
-#include "kernel_compat.h"
 #include "allowlist.h"
 #include "arch.h"
 #include "klog.h" // IWYU pragma: keep

@@ -1092,7 +1092,7 @@ static int may_linkat(struct path *link)
 	struct inode *inode = link->dentry->d_inode;
 
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
-	if (link->dentry->d_inode && unlikely(link->dentry->d_inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
+	if (inode && unlikely(inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 		return -ENOENT;
 	}
 #endif
@@ -2975,6 +2975,7 @@ static int may_delete(struct vfsmount *mnt, struct inode *dir, struct dentry *vi
 		return error;
 	if (IS_APPEND(dir))
 		return -EPERM;
+
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
 	if (unlikely(inode->i_state & INODE_STATE_SUS_PATH) && likely(current->susfs_task_state & TASK_STRUCT_NON_ROOT_USER_APP_PROC)) {
 		return -ENOENT;

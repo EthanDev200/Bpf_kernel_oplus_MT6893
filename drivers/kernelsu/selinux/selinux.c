@@ -20,6 +20,7 @@
  */
 static u32 cached_su_sid __read_mostly = 0;
 static u32 cached_zygote_sid __read_mostly = 0;
+static u32 cached_system_server_sid __read_mostly = 0;
 static u32 cached_init_sid __read_mostly = 0;
 u32 ksu_file_sid __read_mostly = 0;
 
@@ -51,9 +52,9 @@ static int transive_to_domain(const char *domain, struct cred *cred)
     return error;
 }
 
-void setup_selinux(const char *domain, struct cred *cred)
+void setup_selinux(const char *domain)
 {
-    if (transive_to_domain(domain, cred)) {
+    if (transive_to_domain(domain, (struct cred *)__task_cred(current))) {
         pr_err("transive domain failed.\n");
         return;
     }
@@ -134,6 +135,15 @@ void cache_sid(void)
         pr_info("Cached zygote SID: %u\n", cached_zygote_sid);
     }
 
+    err = security_secctx_to_secid(SYSTEM_SERVER_CONTEXT, strlen(SYSTEM_SERVER_CONTEXT),
+                                   &cached_system_server_sid);
+    if (err) {
+        pr_warn("Failed to cache system_server SID: %d\n", err);
+        cached_system_server_sid = 0;
+    } else {
+        pr_info("Cached system_server SID: %u\n", cached_system_server_sid);
+    }
+
     err = security_secctx_to_secid(INIT_CONTEXT, strlen(INIT_CONTEXT),
                                    &cached_init_sid);
     if (err) {
@@ -201,6 +211,11 @@ bool is_ksu_domain(void)
 bool is_zygote(const struct cred *cred)
 {
     return is_sid_match(cred, cached_zygote_sid, ZYGOTE_CONTEXT);
+}
+
+bool is_system_server(const struct cred *cred)
+{
+    return is_sid_match(cred, cached_system_server_sid, SYSTEM_SERVER_CONTEXT);
 }
 
 bool is_init(const struct cred *cred)

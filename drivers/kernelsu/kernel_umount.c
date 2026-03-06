@@ -10,7 +10,6 @@
 #include <linux/printk.h>
 #include <linux/types.h>
 
-#include "kernel_compat.h"
 #include "kernel_umount.h"
 #include "klog.h" // IWYU pragma: keep
 #include "allowlist.h"
@@ -18,6 +17,7 @@
 #include "feature.h"
 #include "ksud.h"
 #include "ksu.h"
+#include "util.h"
 
 static bool ksu_kernel_umount_enabled = true;
 
@@ -132,7 +132,7 @@ int ksu_handle_umount(uid_t old_uid, uid_t new_uid)
         pr_info("handle umount ignore non zygote child: %d\n", current->pid);
         return 0;
     }
-
+    
     // umount the target mnt
     pr_info("handle umount for uid: %d, pid: %d\n", new_uid, current->pid);
 

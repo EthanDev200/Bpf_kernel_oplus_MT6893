@@ -12,7 +12,6 @@
 #include <linux/uaccess.h>
 #include <linux/uidgid.h>
 
-#include "kernel_compat.h"
 #include "allowlist.h"
 #include "setuid_hook.h"
 #include "klog.h" // IWYU pragma: keep
@@ -22,6 +21,11 @@
 #include "supercalls.h"
 #include "syscall_hook_manager.h"
 #include "kernel_umount.h"
+#include "util.h"
+
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs_def.h>
+#endif
 
 static void ksu_install_manager_fd_tw_func(struct callback_head *cb)
 {
@@ -65,6 +69,13 @@ int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid)
         ksu_set_task_tracepoint_flag(current);
     } else {
         ksu_clear_task_tracepoint_flag_if_needed(current);
+#ifdef CONFIG_KSU_SUSFS
+        if (is_appuid(new_uid)) {
+            task_lock(current);
+            current->susfs_task_state |= TASK_STRUCT_NON_ROOT_USER_APP_PROC;
+            task_unlock(current);
+        }
+#endif
     }
 
     // Handle kernel umount

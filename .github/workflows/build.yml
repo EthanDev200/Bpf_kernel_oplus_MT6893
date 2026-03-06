@@ -23,8 +23,9 @@ jobs:
         git clone --depth=1 https://github.com/kdrag0n/proton-clang.git $GITHUB_WORKSPACE/toolchain/proton-clang
 
     - name: Build Kernel
+      env:
+        TOOLCHAIN: ${{ github.workspace }}/toolchain/proton-clang
       run: |
-        sed -i 's|TOOLCHAIN=.*|TOOLCHAIN='$GITHUB_WORKSPACE'/toolchain/proton-clang|' build_kernel.sh
         bash build_kernel.sh
 
     - name: Upload Image.gz-dtb

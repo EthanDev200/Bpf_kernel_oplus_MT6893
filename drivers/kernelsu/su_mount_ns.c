@@ -15,7 +15,17 @@
 #include <linux/version.h>
 #include <linux/mount.h>
 
-#include "kernel_compat.h"
+#ifndef TWA_RESUME
+#define TWA_RESUME 1
+#endif
+
+#ifndef MS_REC
+#define MS_REC		16384
+#endif
+#ifndef MS_PRIVATE
+#define MS_PRIVATE	(1<<18)
+#endif
+
 #include "arch.h"
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"

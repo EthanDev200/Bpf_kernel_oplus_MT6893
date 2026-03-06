@@ -12,7 +12,6 @@
 #include <linux/uaccess.h>
 #include <linux/version.h>
 
-#include "kernel_compat.h"
 #include "supercalls.h"
 #include "arch.h"
 #include "allowlist.h"
@@ -24,6 +23,7 @@
 #include "selinux/selinux.h"
 #include "file_wrapper.h"
 #include "syscall_hook_manager.h"
+#include "util.h"
 
 #ifdef CONFIG_KSU_MANUAL_SU
 #include "manual_su.h"
@@ -78,6 +78,12 @@ static int do_get_info(void __user *arg)
     if (is_manager()) {
         cmd.flags |= 0x2;
     }
+
+    // Identify as Legacy (Non-GKI) kernel
+    cmd.flags |= 0x10;
+    cmd.flags |= 0x20;
+    cmd.flags |= 0x40;
+
     cmd.features = KSU_FEATURE_MAX;
 
     if (copy_to_user(arg, &cmd, sizeof(cmd))) {
@@ -102,6 +108,13 @@ static int do_report_event(void __user *arg)
         if (!post_fs_data_lock) {
             post_fs_data_lock = true;
             pr_info("post-fs-data triggered\n");
+            // Fallback crowning: if manager isn't set, and we're in debug mode, crown the caller
+            #ifdef CONFIG_KSU_DEBUG
+            if (!ksu_is_manager_appid_valid()) {
+                ksu_set_manager_appid(current_uid().val % PER_USER_RANGE);
+                pr_info("Debug: Fallback crowned UID %d as manager during POST_FS_DATA\n", ksu_get_manager_appid());
+            }
+            #endif
             on_post_fs_data();
         }
         break;
@@ -156,110 +169,49 @@ static int do_check_safemode(void __user *arg)
     return 0;
 }
 
-static int do_new_get_allow_list_common(void __user *arg, bool allow)
+static int do_get_allow_list(void __user *arg)
 {
-    struct ksu_new_get_allow_list_cmd cmd;
-    int *arr = NULL;
-    int err = 0;
+    struct ksu_get_allow_list_cmd cmd;
 
     if (copy_from_user(&cmd, arg, sizeof(cmd))) {
         return -EFAULT;
     }
 
-    if (cmd.count) {
-        arr = kmalloc(sizeof(int) * cmd.count, GFP_KERNEL);
-        if (!arr) {
-            return -ENOMEM;
-        }
-    }
-
-    bool success =
-        ksu_get_allow_list(arr, cmd.count, &cmd.count, &cmd.total_count, allow);
+    bool success = ksu_get_allow_list((int *)cmd.uids, (int *)&cmd.count, true);
 
     if (!success) {
-        err = -EFAULT;
-        goto out;
+        return -EFAULT;
     }
 
     if (copy_to_user(arg, &cmd, sizeof(cmd))) {
-        pr_err("new_get_allow_list: copy_to_user count failed\n");
-        err = -EFAULT;
-        goto out;
+        pr_err("get_allow_list: copy_to_user failed\n");
+        return -EFAULT;
     }
 
-    if (cmd.count &&
-        copy_to_user(&((struct ksu_new_get_allow_list_cmd *)arg)->uids, arr,
-                     sizeof(int) * cmd.count)) {
-        pr_err("new_get_allow_list: copy_to_user uids failed\n");
-        err = -EFAULT;
-    }
-
-out:
-    if (arr) {
-        kfree(arr);
-    }
-    return err;
-}
-
-static int do_new_get_deny_list(void __user *arg)
-{
-    return do_new_get_allow_list_common(arg, false);
-}
-
-static int do_new_get_allow_list(void __user *arg)
-{
-    return do_new_get_allow_list_common(arg, true);
-}
-
-static int do_get_allow_list_common(void __user *arg, bool allow)
-{
-    int *arr = NULL;
-    int err = 0;
-    u16 count;
-    u32 out_count;
-    static const u16 kSize = 128;
-
-    arr = kmalloc(sizeof(int) * kSize, GFP_KERNEL);
-    if (!arr) {
-        return -ENOMEM;
-    }
-
-    bool success = ksu_get_allow_list(arr, kSize, &count, NULL, allow);
-
-    if (!success) {
-        err = -EFAULT;
-        goto out;
-    }
-
-    out_count = count;
-
-    if (copy_to_user(arg + offsetof(struct ksu_get_allow_list_cmd, count),
-                     &out_count, sizeof(u32))) {
-        pr_err("get_allow_list: copy_to_user count failed\n");
-        err = -EFAULT;
-        goto out;
-    }
-
-    if (copy_to_user(arg, arr, sizeof(u32) * count)) {
-        pr_err("get_allow_list: copy_to_user uids failed\n");
-        err = -EFAULT;
-    }
-
-out:
-    if (arr) {
-        kfree(arr);
-    }
-    return err;
+    return 0;
 }
 
 static int do_get_deny_list(void __user *arg)
 {
-    return do_get_allow_list_common(arg, false);
-}
+    struct ksu_get_allow_list_cmd cmd;
 
-static int do_get_allow_list(void __user *arg)
-{
-    return do_get_allow_list_common(arg, true);
+    if (copy_from_user(&cmd, arg, sizeof(cmd))) {
+        return -EFAULT;
+    }
+
+    bool success =
+        ksu_get_allow_list((int *)cmd.uids, (int *)&cmd.count, false);
+
+    if (!success) {
+        return -EFAULT;
+    }
+
+    if (copy_to_user(arg, &cmd, sizeof(cmd))) {
+        pr_err("get_deny_list: copy_to_user failed\n");
+        return -EFAULT;
+    }
+
+    return 0;
 }
 
 static int do_uid_granted_root(void __user *arg)
@@ -336,19 +288,17 @@ static int do_get_app_profile(void __user *arg)
 static int do_set_app_profile(void __user *arg)
 {
     struct ksu_set_app_profile_cmd cmd;
-    int ret;
 
     if (copy_from_user(&cmd, arg, sizeof(cmd))) {
         pr_err("set_app_profile: copy_from_user failed\n");
         return -EFAULT;
     }
 
-    ret = ksu_set_app_profile(&cmd.profile);
-    if (!ret) {
-        ksu_persistent_allow_list();
-        ksu_mark_running_process();
+    if (!ksu_set_app_profile(&cmd.profile, true)) {
+        return -EFAULT;
     }
-    return ret;
+
+    return 0;
 }
 
 static int do_get_feature(void __user *arg)
@@ -549,7 +499,7 @@ static int add_try_umount(void __user *arg)
         new_entry->umountable = kstrdup(buf, GFP_KERNEL);
         if (!new_entry->umountable) {
             kfree(new_entry);
-            return -ENOMEM;
+            return -1;
         }
 
         down_write(&mount_list_lock);
@@ -562,7 +512,7 @@ static int add_try_umount(void __user *arg)
                 up_write(&mount_list_lock);
                 kfree(new_entry->umountable);
                 kfree(new_entry);
-                return -EEXIST;
+                return -1;
             }
         }
 
@@ -627,11 +577,6 @@ static int list_try_umount(void __user *arg)
     if (copy_from_user(&cmd, arg, sizeof(cmd)))
         return -EFAULT;
 
-    if (cmd.buf_size > 1024 * 1024) {
-        pr_err("list_try_umount: invalid buf_size %u\n", cmd.buf_size);
-        return -EINVAL;
-    }
-
     output_size = cmd.buf_size ? cmd.buf_size : 4096;
 
     if (!cmd.arg || output_size == 0)
@@ -676,7 +621,7 @@ static int do_get_sulog_dump(void __user *arg)
     int ret;
 
     if (current_uid().val != 0)
-        return -EFAULT;
+		return -EFAULT;
 
     ret = send_sulog_dump(arg);
     if (ret)
@@ -813,14 +758,6 @@ static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
     { .cmd = KSU_IOCTL_GET_DENY_LIST,
       .name = "GET_DENY_LIST",
       .handler = do_get_deny_list,
-      .perm_check = manager_or_root },
-    { .cmd = KSU_IOCTL_NEW_GET_ALLOW_LIST,
-      .name = "NEW_GET_ALLOW_LIST",
-      .handler = do_new_get_allow_list,
-      .perm_check = manager_or_root },
-    { .cmd = KSU_IOCTL_NEW_GET_DENY_LIST,
-      .name = "NEW_GET_DENY_LIST",
-      .handler = do_new_get_deny_list,
       .perm_check = manager_or_root },
     { .cmd = KSU_IOCTL_UID_GRANTED_ROOT,
       .name = "UID_GRANTED_ROOT",
@@ -995,12 +932,18 @@ void ksu_supercalls_init(void)
     }
 
     sulog_init_heap(); // grab heap memory for sulog
+
 }
 
 void ksu_supercalls_exit(void)
 {
     unregister_kprobe(&reboot_kp);
 }
+
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs.h>
+extern bool susfs_handle_ioctl(unsigned int cmd, unsigned long arg);
+#endif
 
 // IOCTL dispatcher
 static long anon_ksu_ioctl(struct file *filp, unsigned int cmd,
@@ -1027,6 +970,12 @@ static long anon_ksu_ioctl(struct file *filp, unsigned int cmd,
             return ret;
         }
     }
+
+#ifdef CONFIG_KSU_SUSFS
+    if (susfs_handle_ioctl(cmd, arg)) {
+        return 0;
+    }
+#endif
 
     pr_warn("ksu ioctl: unsupported command 0x%x\n", cmd);
     return -ENOTTY;

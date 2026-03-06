@@ -32,7 +32,7 @@
 #include <linux/rculist_bl.h>
 #include <linux/list_lru.h>
 #ifdef CONFIG_KSU_SUSFS_SUS_PATH
-#include <linux/susfs_def.h>
+#include <linux/susfs.h>
 #endif
 #include "internal.h"
 #include "mount.h"
@@ -1828,6 +1828,7 @@ type_determined:
 static void __d_instantiate(struct dentry *dentry, struct inode *inode)
 {
 	unsigned add_flags = d_flags_for_inode(inode);
+
 	WARN_ON(d_in_lookup(dentry));
 
 	spin_lock(&dentry->d_lock);
