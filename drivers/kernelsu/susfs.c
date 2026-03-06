@@ -16,6 +16,8 @@
 #include <linux/susfs.h>
 #include "../../../fs/mount.h"
 #include "susfs.h"
+#include "manager.h"
+#include "selinux/selinux.h"
 
 static spinlock_t susfs_spin_lock;
 
