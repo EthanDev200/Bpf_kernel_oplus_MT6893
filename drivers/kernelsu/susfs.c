@@ -2,6 +2,7 @@
 #include <linux/cred.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
+#include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <linux/printk.h>
 #include <linux/namei.h>
@@ -908,12 +909,31 @@ out:
 #endif // #ifdef CONFIG_KSU_SUSFS_SUS_SU
 
 /* susfs_init */
+static int susfs_version_proc_show(struct seq_file *m, void *v)
+{
+        seq_printf(m, "%s\n", SUSFS_VERSION);
+        return 0;
+}
+
+static int susfs_version_proc_open(struct inode *inode, struct file *file)
+{
+        return single_open(file, susfs_version_proc_show, NULL);
+}
+
+static const struct file_operations susfs_version_proc_fops = {
+        .open    = susfs_version_proc_open,
+        .read    = seq_read,
+        .llseek  = seq_lseek,
+        .release = single_release,
+};
+
 void susfs_init(void) {
         spin_lock_init(&susfs_spin_lock);
 #ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
         spin_lock_init(&susfs_uname_spin_lock);
         susfs_my_uname_init();
 #endif
+        proc_create("susfs_version", 0444, NULL, &susfs_version_proc_fops);
         SUSFS_LOGI("susfs is initialized! version: " SUSFS_VERSION " \n");
 }
 
