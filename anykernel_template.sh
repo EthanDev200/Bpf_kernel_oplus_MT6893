@@ -4,7 +4,7 @@
 ### AnyKernel setup
 # global properties
 properties() { '
-kernel.string=SukiSU-Ultra-Definitive-xCaptaiN09
+kernel.string=SukiSU_Ultra_RMX3031
 do.devicecheck=1
 do.modules=0
 do.systemless=1
@@ -35,6 +35,18 @@ PATCH_VBMETA_FLAG=auto;
 
 # import functions/variables and setup patching - see for reference (DO NOT REMOVE)
 . tools/ak3-core.sh;
+
+ui_print " ";
+ui_print "************************************";
+ui_print "        SukiSU_Ultra_RMX3031        ";
+ui_print "************************************";
+ui_print " ";
+ui_print "  Kernel Source: ManshuTyagi";
+ui_print "  Root Implementation: xCaptaiN09";
+ui_print "  SukiSU Ultra + SuSFS v2.0.0";
+ui_print " ";
+ui_print "************************************";
+ui_print " ";
 
 # boot install
 split_boot;
