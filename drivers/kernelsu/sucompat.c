@@ -12,6 +12,12 @@
 #include <linux/sched/task_stack.h>
 #include <linux/ptrace.h>
 
+bool ksu_devpts_hook = false;
+
+int ksu_handle_devpts(struct inode *inode) {
+    return 0;
+}
+
 #include "allowlist.h"
 #include "feature.h"
 #include "klog.h" // IWYU pragma: keep
@@ -182,8 +188,6 @@ void ksu_sucompat_exit()
 }
 
 #ifdef CONFIG_KSU_SUSFS_SUS_SU
-extern bool ksu_devpts_hook;
-
 void ksu_susfs_disable_sus_su(void) {
     ksu_devpts_hook = false;
 }

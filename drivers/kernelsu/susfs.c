@@ -569,10 +569,16 @@ void susfs_try_umount(uid_t target_uid) {
 			SUSFS_LOGE("failed umounting '%s' for uid: %d, mnt_mode '%d' not supported\n",
 							cursor->info.target_pathname, target_uid, cursor->info.mnt_mode);
 		}
-	}
-}
+		}
+		#endif
 
-#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
+		void susfs_try_umount_all(uid_t uid) {
+		#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
+		susfs_try_umount(uid);
+		#endif
+		}
+
+		#ifdef CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
 void susfs_auto_add_try_umount_for_bind_mount(struct path *path) {
 	struct st_susfs_try_umount_list *cursor = NULL, *temp = NULL;
 	struct st_susfs_try_umount_list *new_list = NULL;
@@ -993,6 +999,14 @@ void ksu_try_umount(const char *mnt, bool check_mnt, int flags, uid_t uid)
 {
 	// Basic implementation for kernel 4.19
 	try_umount(mnt, flags);
+}
+
+bool susfs_is_allow_su(void) {
+#ifdef CONFIG_KSU_SUSFS_SUS_SU
+    return susfs_get_sus_su_working_mode() != 0;
+#else
+    return false;
+#endif
 }
 
 #endif
