@@ -933,9 +933,15 @@ void susfs_init(void) {
         spin_lock_init(&susfs_uname_spin_lock);
         susfs_my_uname_init();
 #endif
-        proc_create("susfs_version", 0444, NULL, &susfs_version_proc_fops);
         SUSFS_LOGI("susfs is initialized! version: " SUSFS_VERSION " \n");
 }
+
+static int __init susfs_proc_init(void)
+{
+        proc_create("susfs_version", 0444, NULL, &susfs_version_proc_fops);
+        return 0;
+}
+late_initcall(susfs_proc_init);
 
 #ifdef CONFIG_KSU_SUSFS
 extern void susfs_run_try_umount_for_current_mnt_ns(void);
