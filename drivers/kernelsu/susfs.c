@@ -656,7 +656,6 @@ out_free_pathname:
 	kfree(pathname);
 }
 #endif // #ifdef CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
-#endif // #ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
 
 /* spoof_uname */
 #ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
