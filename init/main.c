@@ -556,7 +556,6 @@ static void __init mm_init(void)
 	pti_init();
 }
 
-extern void susfs_init(void);
 
 asmlinkage __visible void __init start_kernel(void)
 {
@@ -752,7 +751,6 @@ asmlinkage __visible void __init start_kernel(void)
 	security_init();
 	dbg_late_init();
 	vfs_caches_init();
-	susfs_init();
 	pagecache_init();
 	signals_init();
 	seq_file_init();
