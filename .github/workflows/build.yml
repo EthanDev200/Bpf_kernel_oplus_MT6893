@@ -11,8 +11,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-        with:
-          submodules: recursive
+      with:
+        submodules: recursive
 
     - name: Install dependencies
       run: |
@@ -51,10 +51,10 @@ jobs:
         cp anykernel_template.sh AnyKernel3/anykernel.sh
         cd AnyKernel3
         rm -rf .git
-        zip -r9 ../SukiSU_Ultra_RMX3031.zip *
+        zip -r9 ../KSU_Next_RMX3031.zip *
 
     - name: Upload Flashable Zip
       uses: actions/upload-artifact@v4
       with:
-        name: SukiSU_Ultra_RMX3031
-        path: SukiSU_Ultra_RMX3031.zip
+        name: KSU_Next_RMX3031
+        path: KSU_Next_RMX3031.zip

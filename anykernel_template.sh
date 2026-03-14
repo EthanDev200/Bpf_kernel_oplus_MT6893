@@ -4,7 +4,7 @@
 ### AnyKernel setup
 # global properties
 properties() { '
-kernel.string=SukiSU_Ultra_RMX3031
+kernel.string=KSU_Next_RMX3031
 do.devicecheck=1
 do.modules=0
 do.systemless=1
@@ -38,12 +38,12 @@ PATCH_VBMETA_FLAG=auto;
 
 ui_print " ";
 ui_print "************************************";
-ui_print "        SukiSU_Ultra_RMX3031        ";
+ui_print "        KSU_Next_RMX3031          ";
 ui_print "************************************";
 ui_print " ";
 ui_print "  Kernel Source: ManshuTyagi";
 ui_print "  Root Implementation: xCaptaiN09";
-ui_print "  SukiSU Ultra + SuSFS v2.0.0";
+ui_print "  KernelSU Next";
 ui_print " ";
 ui_print "************************************";
 ui_print " ";
