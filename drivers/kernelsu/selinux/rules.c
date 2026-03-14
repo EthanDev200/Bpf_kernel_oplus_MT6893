@@ -9,18 +9,25 @@
 #include "linux/lsm_audit.h" // IWYU pragma: keep
 #include "xfrm.h"
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 #define SELINUX_POLICY_INSTEAD_SELINUX_SS
+#endif
 
 #define ALL NULL
 
 static struct policydb *get_policydb(void)
 {
     struct policydb *db;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0)
-    db = &selinux_state.ss->policydb;
+#ifdef KSU_COMPAT_USE_SELINUX_STATE
+#ifdef SELINUX_POLICY_INSTEAD_SELINUX_SS
+	struct selinux_policy *policy = selinux_state.policy;
+	db = &policy->policydb;
 #else
-    struct selinux_policy *policy = selinux_state.policy;
-    db = &policy->policydb;
+	struct selinux_ss *ss = selinux_state.ss;
+	db = &ss->policydb;
+#endif
+#else
+	db = &policydb;
 #endif
     return db;
 }
@@ -60,8 +67,33 @@ void apply_kernelsu_rules()
         ksu_allowxperm(db, KERNEL_SU_DOMAIN, ALL, "file", ALL);
     }
 
+    // we need to save allowlist in /data/adb/ksu
+    ksu_allow(db, "kernel", "adb_data_file", "dir", ALL);
+    ksu_allow(db, "kernel", "adb_data_file", "file", ALL);
+    // we need to search /data/app
+    ksu_allow(db, "kernel", "apk_data_file", "file", "open");
+    ksu_allow(db, "kernel", "apk_data_file", "dir", "open");
+    ksu_allow(db, "kernel", "apk_data_file", "dir", "read");
+    ksu_allow(db, "kernel", "apk_data_file", "dir", "search");
+    // we may need to do mount on shell
+    ksu_allow(db, "kernel", "shell_data_file", "file", ALL);
+    // we need to read /data/system/packages.list
+    ksu_allow(db, "kernel", "kernel", "capability", "dac_override");
+    // Android 10+:
+    // http://aospxref.com/android-12.0.0_r3/xref/system/sepolicy/private/file_contexts#512
+    ksu_allow(db, "kernel", "packages_list_file", "file", ALL);
+    // Kernel 4.4
+    ksu_allow(db, "kernel", "packages_list_file", "dir", ALL);
+    // Android 9-:
+    // http://aospxref.com/android-9.0.0_r61/xref/system/sepolicy/private/file_contexts#360
+    ksu_allow(db, "kernel", "system_data_file", "file", ALL);
+    ksu_allow(db, "kernel", "system_data_file", "dir", ALL);
     // our ksud triggered by init
+    ksu_allow(db, "init", "adb_data_file", "file", ALL);
+    ksu_allow(db, "init", "adb_data_file", "dir", ALL); // #1289
     ksu_allow(db, "init", KERNEL_SU_DOMAIN, ALL, ALL);
+    // we need to umount modules in zygote
+    ksu_allow(db, "zygote", "adb_data_file", "dir", "search");
 
     // copied from Magisk rules
     // suRights
@@ -91,15 +123,16 @@ void apply_kernelsu_rules()
     ksu_allow(db, "hwservicemanager", KERNEL_SU_DOMAIN, "file", "open");
     ksu_allow(db, "hwservicemanager", KERNEL_SU_DOMAIN, "process", "getattr");
 
+    // For mounting loop devices, mirrors, tmpfs
+    ksu_allow(db, "kernel", ALL, "file", "read");
+    ksu_allow(db, "kernel", ALL, "file", "write");
+
     // Allow all binder transactions
     ksu_allow(db, ALL, KERNEL_SU_DOMAIN, "binder", ALL);
 
     // Allow system server kill su process
     ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "getpgid");
     ksu_allow(db, "system_server", KERNEL_SU_DOMAIN, "process", "sigkill");
-
-    // https://android-review.googlesource.com/c/platform/system/logging/+/3725346
-    ksu_dontaudit(db, "untrusted_app", KERNEL_SU_DOMAIN, "dir", "getattr");
 
     mutex_unlock(&ksu_rules);
 }
@@ -144,7 +177,8 @@ static int get_object(char *buf, char __user *user_object, size_t buf_sz,
 
     return 0;
 }
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0))
+#if ((!defined(KSU_COMPAT_USE_SELINUX_STATE)) || \
+	LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0))
 extern int avc_ss_reset(u32 seqno);
 #else
 extern int avc_ss_reset(struct selinux_avc *avc, u32 seqno);
@@ -152,7 +186,8 @@ extern int avc_ss_reset(struct selinux_avc *avc, u32 seqno);
 // reset avc cache table, otherwise the new rules will not take effect if already denied
 static void reset_avc_cache()
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0))
+#if ((!defined(KSU_COMPAT_USE_SELINUX_STATE)) || \
+	LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0))
     avc_ss_reset(0);
     selnl_notify_policyload(0);
     selinux_status_update_policyload(0);
