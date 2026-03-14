@@ -19,18 +19,6 @@
     } while (0)
 #endif
 
-#include <linux/version.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0)
-#define TWA_RESUME 1
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 2)
-struct seccomp_filter;
-static inline void ksu_seccomp_allow_cache(struct seccomp_filter *filter, int nr)
-{
-}
-#endif
-
 bool try_set_access_flag(unsigned long addr);
 
 #endif

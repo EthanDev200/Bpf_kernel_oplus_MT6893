@@ -13,18 +13,7 @@
 #include <linux/syscalls.h>
 #include <linux/task_work.h>
 #include <linux/version.h>
-#include <linux/mount.h>
-
-#ifndef TWA_RESUME
-#define TWA_RESUME 1
-#endif
-
-#ifndef MS_REC
-#define MS_REC		16384
-#endif
-#ifndef MS_PRIVATE
-#define MS_PRIVATE	(1<<18)
-#endif
+#include <uapi/linux/mount.h>
 
 #include "arch.h"
 #include "klog.h" // IWYU pragma: keep
