@@ -2,7 +2,7 @@ name: Build Kernel
 
 on:
   push:
-    branches: [ sukisu-4.19 ]
+    branches: [ sukisu-4.19, ksu-next-4.19 ]
   workflow_dispatch:
 
 jobs:
