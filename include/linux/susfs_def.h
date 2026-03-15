@@ -61,3 +61,4 @@
 
 #endif // #ifndef KSU_SUSFS_DEF_H
 #define TASK_STRUCT_PROC_IS_UMOUNTED BIT(25)
+void susfs_set_current_proc_umounted(void);
