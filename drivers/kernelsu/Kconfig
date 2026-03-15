@@ -50,3 +50,38 @@ config KSU_SUSFS
 	default y
 	help
 	  Enable SuSFS support for root hiding.
+
+config KSU_SUSFS_SUS_PATH
+	bool "SuSFS sus_path support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_SUS_MOUNT
+	bool "SuSFS sus_mount support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_SUS_KSTAT
+	bool "SuSFS sus_kstat support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_SUS_OVERLAYFS
+	bool "SuSFS sus_overlayfs support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_TRY_UMOUNT
+	bool "SuSFS try_umount support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_SPOOF_UNAME
+	bool "SuSFS spoof uname support"
+	depends on KSU_SUSFS
+	default y
+
+config KSU_SUSFS_ENABLE_LOG
+	bool "SuSFS enable log"
+	depends on KSU_SUSFS
+	default y
