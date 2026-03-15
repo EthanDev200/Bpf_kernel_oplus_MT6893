@@ -2,6 +2,7 @@
 #include <linux/cred.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
+#include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <linux/printk.h>
 #include <linux/namei.h>
@@ -14,14 +15,14 @@
 #include <linux/fdtable.h>
 #include <linux/statfs.h>
 #include <linux/susfs.h>
-#include "mount.h"
+#include "../../../fs/mount.h"
+#include "susfs.h"
+#include "manager.h"
+#include "selinux/selinux.h"
 
 static spinlock_t susfs_spin_lock;
 
-extern bool susfs_is_current_ksu_domain(void);
-#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-extern void ksu_try_umount(const char *mnt, bool check_mnt, int flags, uid_t uid);
-#endif
+void ksu_try_umount(const char *mnt, bool check_mnt, int flags, uid_t uid);
 
 #ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
 bool susfs_is_log_enabled __read_mostly = true;
@@ -571,6 +572,13 @@ void susfs_try_umount(uid_t target_uid) {
 		}
 	}
 }
+#endif
+
+void susfs_try_umount_all(uid_t uid) {
+#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
+	susfs_try_umount(uid);
+#endif
+}
 
 #ifdef CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
 void susfs_auto_add_try_umount_for_bind_mount(struct path *path) {
@@ -649,7 +657,6 @@ out_free_pathname:
 	kfree(pathname);
 }
 #endif // #ifdef CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
-#endif // #ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
 
 /* spoof_uname */
 #ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
@@ -902,15 +909,137 @@ out:
 #endif // #ifdef CONFIG_KSU_SUSFS_SUS_SU
 
 /* susfs_init */
-void susfs_init(void) {
-	spin_lock_init(&susfs_spin_lock);
-#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
-	spin_lock_init(&susfs_uname_spin_lock);
-	susfs_my_uname_init();
-#endif
-	SUSFS_LOGI("susfs is initialized! version: " SUSFS_VERSION " \n");
+static int susfs_version_proc_show(struct seq_file *m, void *v)
+{
+        seq_printf(m, "%s\n", SUSFS_VERSION);
+        return 0;
 }
+
+static int susfs_version_proc_open(struct inode *inode, struct file *file)
+{
+        return single_open(file, susfs_version_proc_show, NULL);
+}
+
+static const struct file_operations susfs_version_proc_fops = {
+        .open    = susfs_version_proc_open,
+        .read    = seq_read,
+        .llseek  = seq_lseek,
+        .release = single_release,
+};
+
+void susfs_init(void) {
+        spin_lock_init(&susfs_spin_lock);
+#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
+        spin_lock_init(&susfs_uname_spin_lock);
+        susfs_my_uname_init();
+#endif
+        SUSFS_LOGI("susfs is initialized! version: " SUSFS_VERSION " \n");
+}
+
+static int __init susfs_proc_init(void)
+{
+        proc_create("susfs_version", 0444, NULL, &susfs_version_proc_fops);
+        return 0;
+}
+late_initcall(susfs_proc_init);
+
+#ifdef CONFIG_KSU_SUSFS
+extern void susfs_run_try_umount_for_current_mnt_ns(void);
+
+bool susfs_handle_ioctl(unsigned int cmd, unsigned long arg) {
+	switch (cmd) {
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+	case CMD_SUSFS_ADD_SUS_PATH:
+		return susfs_add_sus_path((struct st_susfs_sus_path __user *)arg) == 0;
+#endif
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+	case CMD_SUSFS_ADD_SUS_MOUNT:
+		return susfs_add_sus_mount((struct st_susfs_sus_mount __user *)arg) == 0;
+#endif
+#ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
+	case CMD_SUSFS_ADD_SUS_KSTAT:
+	case CMD_SUSFS_ADD_SUS_KSTAT_STATICALLY:
+		return susfs_add_sus_kstat((struct st_susfs_sus_kstat __user *)arg) == 0;
+	case CMD_SUSFS_UPDATE_SUS_KSTAT:
+		return susfs_update_sus_kstat((struct st_susfs_sus_kstat __user *)arg) == 0;
+#endif
+#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
+	case CMD_SUSFS_ADD_TRY_UMOUNT:
+		return susfs_add_try_umount((struct st_susfs_try_umount __user *)arg) == 0;
+#endif
+#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
+	case CMD_SUSFS_SET_UNAME:
+		return susfs_set_uname((struct st_susfs_uname __user *)arg) == 0;
+#endif
+#ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
+	case CMD_SUSFS_ENABLE_LOG:
+		susfs_set_log((bool)arg);
+		return true;
+#endif
+#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
+	case CMD_SUSFS_SET_CMDLINE_OR_BOOTCONFIG:
+		return susfs_set_cmdline_or_bootconfig((char __user *)arg) == 0;
+#endif
+#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
+	case CMD_SUSFS_ADD_OPEN_REDIRECT:
+		return susfs_add_open_redirect((struct st_susfs_open_redirect __user *)arg) == 0;
+#endif
+#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
+	case CMD_SUSFS_RUN_UMOUNT_FOR_CURRENT_MNT_NS:
+		susfs_run_try_umount_for_current_mnt_ns();
+		return true;
+#endif
+#ifdef CONFIG_KSU_SUSFS_SUS_SU
+	case CMD_SUSFS_SUS_SU:
+		return susfs_sus_su((struct st_sus_su __user *)arg) == 0;
+#endif
+	default:
+		return false;
+	}
+}
+#endif
 
 /* No module exit is needed becuase it should never be a loadable kernel module */
 //void __init susfs_exit(void)
 
+#ifdef CONFIG_KSU_SUSFS
+
+bool susfs_is_current_ksu_domain(void)
+{
+	return is_manager() || is_ksu_domain();
+}
+
+bool susfs_is_current_zygote_domain(void)
+{
+	return is_zygote(current_cred());
+}
+
+void ksu_susfs_init(void)
+{
+	susfs_init();
+	pr_info("ksu_susfs: initialized\n");
+}
+
+extern void try_umount(const char *mnt, int flags);
+void ksu_try_umount(const char *mnt, bool check_mnt, int flags, uid_t uid)
+{
+	// Basic implementation for kernel 4.19
+	try_umount(mnt, flags);
+}
+
+bool susfs_is_allow_su(void) {
+#ifdef CONFIG_KSU_SUSFS_SUS_SU
+    return susfs_get_sus_su_working_mode() != 0;
+#else
+    return false;
+#endif
+}
+
+#endif
+
+
+
+void susfs_set_current_proc_umounted(void) {
+	current->susfs_task_state |= TASK_STRUCT_PROC_IS_UMOUNTED;
+}
+EXPORT_SYMBOL_GPL(susfs_set_current_proc_umounted);

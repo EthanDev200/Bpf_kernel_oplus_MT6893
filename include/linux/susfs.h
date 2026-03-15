@@ -8,7 +8,7 @@
 #include <linux/path.h>
 #include <linux/susfs_def.h>
 
-#define SUSFS_VERSION "v1.5.5"
+#define SUSFS_VERSION "v2.0.0"
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0)
 #define SUSFS_VARIANT "NON-GKI"
 #else
@@ -152,6 +152,7 @@ void susfs_sus_ino_for_show_map_vma(unsigned long ino, dev_t *out_dev, unsigned 
 #ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
 int susfs_add_try_umount(struct st_susfs_try_umount* __user user_info);
 void susfs_try_umount(uid_t target_uid);
+void susfs_set_current_proc_umounted(void);
 #ifdef CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
 void susfs_auto_add_try_umount_for_bind_mount(struct path *path);
 #endif // #ifdef CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT
@@ -182,5 +183,6 @@ int susfs_sus_su(struct st_sus_su* __user user_info);
 #endif
 /* susfs_init */
 void susfs_init(void);
+extern bool susfs_is_current_ksu_domain(void);
 
 #endif
