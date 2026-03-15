@@ -1060,8 +1060,7 @@ static long anon_ksu_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 		return 0;
 	}
 #endif
-	pr_warn("ksu ioctl: unsupported command 0x%x
-", cmd);
+	pr_warn("ksu ioctl: unsupported command 0x%x\n", cmd);
 	return -ENOTTY;
 }
 
