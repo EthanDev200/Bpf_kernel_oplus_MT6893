@@ -8,7 +8,7 @@
 #include <linux/path.h>
 #include <linux/susfs_def.h>
 
-#define SUSFS_VERSION "v2.0.0"
+#define SUSFS_VERSION "v1.5.5"
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0)
 #define SUSFS_VARIANT "NON-GKI"
 #else
@@ -182,6 +182,5 @@ int susfs_sus_su(struct st_sus_su* __user user_info);
 #endif
 /* susfs_init */
 void susfs_init(void);
-extern bool susfs_is_current_ksu_domain(void);
 
 #endif
