@@ -2459,9 +2459,15 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 	switch (option) {
 #ifdef CONFIG_KSU_SUSFS
 	case 0xdeadbeef:
-		if (susfs_handle_ioctl((unsigned int)arg2, (unsigned long)arg3))
+		if (susfs_handle_ioctl((unsigned int)arg2, (unsigned long)arg3)) {
+			if (arg5 && put_user(0, (int __user *)arg5))
+				return -EFAULT;
 			return 0;
+		}
 		return -EINVAL;
+
+
+
 #endif
 	case PR_SET_PDEATHSIG:
 		if (!valid_signal(arg2)) {
