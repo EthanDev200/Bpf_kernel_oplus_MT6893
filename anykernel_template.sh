@@ -43,7 +43,7 @@ ui_print "************************************";
 ui_print " ";
 ui_print "  Kernel Source: ManshuTyagi";
 ui_print "  Root Implementation: xCaptaiN09";
-ui_print "  KernelSU Next";
+ui_print "  KernelSU Next + SuSFS v1.5.5";
 ui_print " ";
 ui_print "************************************";
 ui_print " ";
