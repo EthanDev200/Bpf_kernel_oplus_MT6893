@@ -948,61 +948,7 @@ bool susfs_handle_ioctl(unsigned int cmd, unsigned long arg) {
 	case CMD_SUSFS_SET_CMDLINE_OR_BOOTCONFIG:
 		return susfs_set_cmdline_or_bootconfig((char __user *)arg) == 0;
 #endif
-#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT
-	case CMD_SUSFS_ADD_OPEN_REDIRECT:
-		return susfs_add_open_redirect((struct st_susfs_open_redirect __user *)arg) == 0;
-#endif
-#ifdef CONFIG_KSU_SUSFS_TRY_UMOUNT
-	case CMD_SUSFS_RUN_UMOUNT_FOR_CURRENT_MNT_NS:
-		susfs_run_try_umount_for_current_mnt_ns();
-		return true;
-#endif
-#ifdef CONFIG_KSU_SUSFS_SUS_SU
-	case CMD_SUSFS_SUS_SU:
-		return susfs_sus_su((struct st_sus_su __user *)arg) == 0;
-#endif
 	default:
 		return false;
 	}
 }
-#endif
-
-/* No module exit is needed becuase it should never be a loadable kernel module */
-//void __init susfs_exit(void)
-
-#ifdef CONFIG_KSU_SUSFS
-
-bool susfs_is_current_ksu_domain(void)
-{
-	return is_manager() || is_ksu_domain();
-}
-
-bool susfs_is_current_zygote_domain(void)
-{
-	return is_zygote(current_cred());
-}
-
-void ksu_susfs_init(void)
-{
-	susfs_init();
-	pr_info("ksu_susfs: initialized\n");
-}
-
-extern void try_umount(const char *mnt, int flags);
-void ksu_try_umount(const char *mnt, bool check_mnt, int flags, uid_t uid)
-{
-	// Basic implementation for kernel 4.19
-	try_umount(mnt, flags);
-}
-
-bool susfs_is_allow_su(void) {
-#ifdef CONFIG_KSU_SUSFS_SUS_SU
-    return susfs_get_sus_su_working_mode() != 0;
-#else
-    return false;
-#endif
-}
-
-#endif
-
-
