@@ -77,6 +77,10 @@
 #endif
 
 #include "uid16.h"
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs.h>
+extern bool susfs_handle_ioctl(unsigned int cmd, unsigned long arg);
+#endif
 
 #ifndef SET_UNALIGN_CTL
 # define SET_UNALIGN_CTL(a, b)	(-EINVAL)
@@ -2453,6 +2457,12 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 
 	error = 0;
 	switch (option) {
+#ifdef CONFIG_KSU_SUSFS
+	case 0xdeadbeef:
+		if (susfs_handle_ioctl((unsigned int)arg2, (unsigned long)arg3))
+			return 0;
+		return -EINVAL;
+#endif
 	case PR_SET_PDEATHSIG:
 		if (!valid_signal(arg2)) {
 			error = -EINVAL;
