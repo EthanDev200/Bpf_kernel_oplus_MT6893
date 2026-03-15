@@ -60,5 +60,3 @@
 #define DATA_ADB_NO_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT "/data/adb/susfs_no_auto_add_try_umount_for_bind_mount"
 
 #endif // #ifndef KSU_SUSFS_DEF_H
-#define TASK_STRUCT_PROC_IS_UMOUNTED BIT(25)
-void susfs_set_current_proc_umounted(void);

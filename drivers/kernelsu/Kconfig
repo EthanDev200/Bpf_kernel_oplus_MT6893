@@ -43,3 +43,10 @@ config KSU_KPROBES_HOOK
 	  This should not be used on kernel below 5.10.
 
 endmenu
+
+config KSU_SUSFS
+	bool "SuSFS support"
+	depends on KSU
+	default y
+	help
+	  Enable SuSFS support for root hiding.

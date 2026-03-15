@@ -28,6 +28,10 @@
 #include "syscall_hook_manager.h"
 
 #include "tiny_sulog.c"
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs.h>
+extern bool susfs_handle_ioctl(unsigned int cmd, unsigned long arg);
+#endif
 
 // Permission check functions
 bool only_manager(void)
@@ -1051,7 +1055,13 @@ static long anon_ksu_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 		}
 	}
 
-	pr_warn("ksu ioctl: unsupported command 0x%x\n", cmd);
+#ifdef CONFIG_KSU_SUSFS
+	if (susfs_handle_ioctl(cmd, arg)) {
+		return 0;
+	}
+#endif
+	pr_warn("ksu ioctl: unsupported command 0x%x
+", cmd);
 	return -ENOTTY;
 }
 
