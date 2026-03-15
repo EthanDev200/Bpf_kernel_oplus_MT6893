@@ -185,3 +185,4 @@ void susfs_init(void);
 
 #endif
 bool susfs_handle_ioctl(unsigned int cmd, unsigned long arg);
+extern void ksu_try_umount(const char *mnt, bool check_mnt, int flags, uid_t uid);
