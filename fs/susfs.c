@@ -952,3 +952,20 @@ bool susfs_handle_ioctl(unsigned int cmd, unsigned long arg) {
 		return false;
 	}
 }
+void ksu_try_umount(const char *mnt, bool check_mnt, int flags, uid_t uid)
+{
+	/* stub - handled by KSU Next internally */
+
+}
+
+bool susfs_is_allow_su(void) {
+#ifdef CONFIG_KSU_SUSFS_SUS_SU
+    return susfs_get_sus_su_working_mode() != 0;
+#else
+    return false;
+#endif
+}
+
+#endif
+
+
