@@ -966,6 +966,5 @@ bool susfs_is_allow_su(void) {
 #endif
 }
 
-#endif
 
 
