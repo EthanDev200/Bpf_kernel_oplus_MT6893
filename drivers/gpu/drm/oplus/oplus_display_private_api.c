@@ -147,8 +147,7 @@ bool oplus_mtk_drm_get_hbm_state(void)
 static ssize_t oplus_display_get_fp_state(struct kobject *kobj,
 	struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d,%d,%d
-", fp_state[0], fp_state[1], fp_state[2]);
+	return sprintf(buf, "%d,%d,%d\n", fp_state[0], fp_state[1], fp_state[2]);
 }
 
 static ssize_t oplus_display_get_brightness(struct kobject *kobj,
