@@ -1235,13 +1235,13 @@ static bool vooc_should_reset_handshake(struct oplus_vooc_chip *chip)
 		return false;
 	chip->fast_present_retry++;
 	if (chip->fast_present_retry > VOOC_FAST_PRESENT_RETRY_MAX) {
-		chg_info("FAST_PRESENT: retry count %d exceeded, forcing reset\n", chip->fast_present_retry);
+		chg_err("FAST_PRESENT: retry count %d exceeded, forcing reset\n", chip->fast_present_retry);
 		chip->fast_present_retry = 0;
 		return true;
 	}
 	if (oplus_vooc_get_reset_active_status() != 1)
 		return false;
-	chg_info("FAST_PRESENT: no active session, reset GPIO asserted\n");
+	chg_err("FAST_PRESENT: no active session, reset GPIO asserted\n");
 	chip->fast_present_retry = 0;
 	return true;
 }
