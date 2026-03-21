@@ -208,6 +208,7 @@ static void oplus_vooc_watchdog(struct timer_list *unused)
 	chip->fastchg_low_temp_full = false;
 	chip->btb_temp_over = false;
 	chip->fast_chg_type = FASTCHG_CHARGER_TYPE_UNKOWN;
+	chip->fast_present_retry = 0;
 	charger_abnormal_log = CRITICAL_LOG_VOOC_WATCHDOG;
 	schedule_work(&chip->vooc_watchdog_work);
 }
@@ -1222,6 +1223,29 @@ static int oplus_get_allowed_current_max(bool fw_7bit)
 	return cur_max_val;
 }
 #endif
+
+#define VOOC_FAST_PRESENT_RETRY_MAX	3
+
+static bool vooc_should_reset_handshake(struct oplus_vooc_chip *chip)
+{
+	if (chip->fastchg_started || chip->fastchg_dummy_started)
+		return false;
+	if (chip->fastchg_ing || chip->fastchg_to_normal ||
+	    chip->fastchg_to_warm || chip->fastchg_to_warm_full)
+		return false;
+	chip->fast_present_retry++;
+	if (chip->fast_present_retry > VOOC_FAST_PRESENT_RETRY_MAX) {
+		chg_info("FAST_PRESENT: retry count %d exceeded, forcing reset\n", chip->fast_present_retry);
+		chip->fast_present_retry = 0;
+		return true;
+	}
+	if (oplus_vooc_get_reset_active_status() != 1)
+		return false;
+	chg_info("FAST_PRESENT: no active session, reset GPIO asserted\n");
+	chip->fast_present_retry = 0;
+	return true;
+}
+
 static void oplus_vooc_fastchg_func(struct work_struct *work)
 {
 	struct delayed_work *dwork = to_delayed_work(work);
@@ -1364,6 +1388,7 @@ static void oplus_vooc_fastchg_func(struct work_struct *work)
 		chip->fastchg_batt_temp_status = BAT_TEMP_NATURAL;
 		chip->vooc_temp_cur_range = FASTCHG_TEMP_RANGE_INIT;
 		chip->fastchg_to_warm_full = false;
+		chip->fast_present_retry = 0;
 		if (chip->adapter_update_real == ADAPTER_FW_UPDATE_FAIL) {
 			chip->adapter_update_real = ADAPTER_FW_UPDATE_NONE;
 			chip->adapter_update_report = chip->adapter_update_real;
@@ -2000,8 +2025,8 @@ out:
 			|| (data == VOOC_NOTIFY_ALLOW_READING_IIC)
 			|| (data == VOOC_NOTIFY_BTB_TEMP_OVER)) {
 		oplus_vooc_battery_update();
-		if (oplus_vooc_get_reset_active_status() != 1
-			&& data == VOOC_NOTIFY_FAST_PRESENT) {
+		if (data == VOOC_NOTIFY_FAST_PRESENT &&
+		    vooc_should_reset_handshake(chip)) {
 			chip->allow_reading = true;
 			chip->fastchg_started = false;
 			chip->fastchg_to_normal = false;
