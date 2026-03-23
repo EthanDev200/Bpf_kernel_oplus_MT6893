@@ -2,7 +2,7 @@ name: Build Kernel
 
 on:
   push:
-    branches: [ sukisu-4.19, ksu-next-4.19 ]
+    branches: [ sukisu-4.19, ksu-next-4.19, realme-ui-ksu ]
   workflow_dispatch:
 
 jobs:
@@ -51,10 +51,10 @@ jobs:
         cp anykernel_template.sh AnyKernel3/anykernel.sh
         cd AnyKernel3
         rm -rf .git
-        zip -r9 ../KSU_Next_Cupida_Denniz.zip *
+        zip -r9 ../Realme_UI_KSU_RMX3031.zip *
 
     - name: Upload Flashable Zip
       uses: actions/upload-artifact@v4
       with:
-        name: KSU_Next_Cupida_Denniz
-        path: KSU_Next_Cupida_Denniz.zip
+        name: Realme_UI_KSU_RMX3031
+        path: Realme_UI_KSU_RMX3031.zip
