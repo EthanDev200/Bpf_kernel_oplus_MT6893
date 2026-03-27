@@ -62,10 +62,8 @@ int __init kernelsu_init(void)
 
 	ksu_file_wrapper_init();
 
-#ifdef MODULE
 #ifndef CONFIG_KSU_DEBUG
 	kobject_del(&THIS_MODULE->mkobj.kobj);
-#endif
 #endif
 	return 0;
 }
