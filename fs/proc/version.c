@@ -8,10 +8,10 @@
 
 static int version_proc_show(struct seq_file *m, void *v)
 {
-	seq_printf(m, linux_proc_banner,
+	/* Spoof version to hide taint and build info */
+	seq_printf(m, "%s version %s (gcc version 12.0.0 (GCC)) #1 SMP PREEMPT\n",
 		utsname()->sysname,
-		utsname()->release,
-		utsname()->version);
+		utsname()->release);
 	return 0;
 }
 
