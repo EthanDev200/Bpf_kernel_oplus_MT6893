@@ -44,17 +44,15 @@ jobs:
         name: Image.gz-dtb
         path: out/arch/arm64/boot/Image.gz-dtb
 
-    - name: Create AnyKernel3 Zip
+    - name: Prepare AnyKernel3
       run: |
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git
         cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
         cp anykernel_template.sh AnyKernel3/anykernel.sh
-        cd AnyKernel3
-        rm -rf .git
-        zip -r9 ../Realme_UI_KSU_RMX3031.zip *
+        rm -rf AnyKernel3/.git
 
     - name: Upload Flashable Zip
       uses: actions/upload-artifact@v4
       with:
         name: Realme_UI_KSU_RMX3031
-        path: Realme_UI_KSU_RMX3031.zip
+        path: AnyKernel3/
