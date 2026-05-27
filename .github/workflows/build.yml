@@ -20,13 +20,17 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y bc bison build-essential curl flex gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi git gnupg gperf libncurses5-dev libssl-dev python2 python3 zip zlib1g-dev
 
-    - name: Fetch 5.15 BPF patches
+    - name: Fetch and apply 5.15 BPF patches
       run: |
+        # 配置仓库本地 Git 身份（不依赖全局设置）
+        git config user.name "EthanDev200"
+        git config user.email "EthanDev200@users.noreply.github.com"
+
+        # 拉取补丁源
         git remote add bpf-src https://github.com/Mi8937/msm-4.19.git
         git fetch bpf-src 5.15-bpf
 
-    - name: Apply all 5.15 BPF commits
-      run: |
+        # 合入补丁
         git cherry-pick bpf-src/5.15-bpf -X theirs
 
     - name: Inject required BPF/BTF configs
