@@ -22,16 +22,15 @@ jobs:
 
     - name: Fetch and apply 5.15 BPF patches
       run: |
-        # 配置仓库本地 Git 身份（不依赖全局设置）
         git config user.name "EthanDev200"
         git config user.email "EthanDev200@users.noreply.github.com"
 
-        # 拉取补丁源
         git remote add bpf-src https://github.com/Mi8937/msm-4.19.git
         git fetch bpf-src 5.15-bpf
 
-        # 合入补丁
-        git cherry-pick bpf-src/5.15-bpf -X theirs
+        # 合入补丁，但跳过导致网络层冲突的提交
+        # 我们先合入前半部分提交，跳过最后导致错误的网络相关提交
+        git cherry-pick --strategy=recursive -X theirs bpf-src/5.15-bpf~10..bpf-src/5.15-bpf~1
 
     - name: Inject required BPF/BTF configs
       run: |
