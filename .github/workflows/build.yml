@@ -1,5 +1,4 @@
-name: Build Kernel
-
+name: Build Kernel with BPF 5.15 Patches
 on:
   push:
     branches: [ sukisu-4.19, ksu-next-4.19, realme-ui-ksu ]
@@ -9,28 +8,38 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
-    - name: Checkout
+    - name: Checkout your kernel
       uses: actions/checkout@v4
       with:
-        submodules: recursive
         fetch-depth: 0
+        submodules: recursive
 
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y bc bison build-essential curl flex gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi git gnupg gperf libncurses5-dev libssl-dev python2 python3 zip zlib1g-dev
 
-    - name: Fetch and apply 5.15 BPF patches
+    - name: Configure Git identity
       run: |
         git config user.name "EthanDev200"
         git config user.email "EthanDev200@users.noreply.github.com"
 
+    - name: Add BPF patch remote
+      run: |
         git remote add bpf-src https://github.com/Mi8937/msm-4.19.git
         git fetch bpf-src 5.15-bpf
 
-        # 合入补丁，但跳过导致网络层冲突的提交
-        # 我们先合入前半部分提交，跳过最后导致错误的网络相关提交
-        git cherry-pick --strategy=recursive -X theirs bpf-src/5.15-bpf~10..bpf-src/5.15-bpf~1
+    - name: Generate and apply BPF patches (auto-skip conflicts)
+      run: |
+        # 生成两个分支之间的差异补丁
+        git diff HEAD bpf-src/5.15-bpf > bpf-515.patch
+
+        # 应用补丁，遇到冲突文件自动跳过
+        git apply --reject --whitespace=fix bpf-515.patch || true
+
+        # 显示被拒绝的文件（方便你后续排查）
+        echo "=== Conflicting files (skipped) ==="
+        find . -name "*.rej" -type f | head -20
 
     - name: Inject required BPF/BTF configs
       run: |
@@ -38,7 +47,6 @@ jobs:
         echo "CONFIG_BPF_SYSCALL=y" >> arch/arm64/configs/cupida_defconfig
         echo "CONFIG_BPF_JIT=y" >> arch/arm64/configs/cupida_defconfig
         echo "CONFIG_BPF_JIT_ALWAYS_ON=y" >> arch/arm64/configs/cupida_defconfig
-        echo "CONFIG_BPF_JIT_DEFAULT_ON=y" >> arch/arm64/configs/cupida_defconfig
         echo "CONFIG_BPF_EVENTS=y" >> arch/arm64/configs/cupida_defconfig
         echo "CONFIG_BPF_RINGBUF=y" >> arch/arm64/configs/cupida_defconfig
         echo "CONFIG_BPF_LINK=y" >> arch/arm64/configs/cupida_defconfig
