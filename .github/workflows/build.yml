@@ -31,13 +31,8 @@ jobs:
 
     - name: Generate and apply BPF patches (auto-skip conflicts)
       run: |
-        # 生成两个分支之间的差异补丁
         git diff HEAD bpf-src/5.15-bpf > bpf-515.patch
-
-        # 应用补丁，遇到冲突文件自动跳过
         git apply --reject --whitespace=fix bpf-515.patch || true
-
-        # 显示被拒绝的文件（方便你后续排查）
         echo "=== Conflicting files (skipped) ==="
         find . -name "*.rej" -type f | head -20
 
@@ -59,6 +54,14 @@ jobs:
         echo "CONFIG_BPF_PERF_EVENTS=y" >> arch/arm64/configs/cupida_defconfig
         echo "CONFIG_BPF_TRACEPOINT=y" >> arch/arm64/configs/cupida_defconfig
 
+    - name: Ensure build script exists and is executable
+      run: |
+        if [ ! -f build_kernel.sh ]; then
+          echo "ERROR: build_kernel.sh is missing after patching!"
+          exit 1
+        fi
+        chmod +x build_kernel.sh
+
     - name: Set up Proton Clang
       run: |
         mkdir -p $GITHUB_WORKSPACE/toolchain
@@ -68,15 +71,7 @@ jobs:
       env:
         TOOLCHAIN: ${{ github.workspace }}/toolchain/proton-clang
       run: |
-        bash build_kernel.sh
-
-    - name: Show errors on failure
-      if: failure()
-      run: grep -E "error:|fatal error:" build.log | head -30
-
-    - name: Print build log on failure
-      if: failure()
-      run: tail -100 build.log
+        ./build_kernel.sh
 
     - name: Upload Image.gz-dtb
       uses: actions/upload-artifact@v4
